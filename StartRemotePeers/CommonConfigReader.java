@@ -13,8 +13,9 @@ public class CommonConfigReader {
 
 //    A simple main to test this class.
     public static void main(String args[]) throws IOException {
-        CommonConfigReader ss = new CommonConfigReader("Common.cfg");
+        CommonConfigReader ss = new CommonConfigReader("../Common.cfg");
         Flags.print("Test main of CommonConfigReader finished", Flags.Debug.INFO);
+        System.out.print(ss); //checking - remove before turning in
     }
 
     final int numberOfPreferredNeighbors;
@@ -58,7 +59,7 @@ public class CommonConfigReader {
                 + "    optimisticUnchokingInterval: " + optimisticUnchokingInterval + "\n"
                 + "    fileName: " + fileName + "\n"
                 + "    fileSize: " + fileSize + "\n"
-                + "    pieceSize: " + pieceSize;
+                + "    pieceSize: " + pieceSize + "\n";
     }
 
 }

@@ -1,3 +1,8 @@
+/**
+ *
+ * @author Kimberly Ying (kimying@ufl.edu)
+ */
+
 import java.util.*;
 import java.io.*;
 import java.nio.file.*;
