@@ -9,6 +9,7 @@
 
 import java.io.*;
 import java.util.*;
+import java.lang.*;
 
 /*
  * The StartRemotePeers class begins remote peer processes. 
@@ -18,6 +19,9 @@ import java.util.*;
  */
 public class StartRemotePeers {
 
+	// String configFilename = "../PeerInfo.cfg"; // use this for remote peers
+	String configFilename = "../LocalPeerInfo.cfg"; // use this for testing on localhost
+
 	public Vector<RemotePeerInfo> peerInfoVector;
 	
 	public void getConfiguration()
@@ -26,7 +30,7 @@ public class StartRemotePeers {
 		int i1;
 		peerInfoVector = new Vector<RemotePeerInfo>();
 		try {
-			BufferedReader in = new BufferedReader(new FileReader("PeerInfo.cfg"));
+			BufferedReader in = new BufferedReader(new FileReader(configFilename));
 			while((st = in.readLine()) != null) {
 				
 				 String[] tokens = st.split("\\s+");
@@ -66,8 +70,13 @@ public class StartRemotePeers {
 				System.out.println("Start remote peer " + pInfo.peerId +  " at " + pInfo.peerAddress );
 				
 				// *********************** IMPORTANT *************************** //
-				// If your program is JAVA, use this line.
-				Runtime.getRuntime().exec("ssh " + pInfo.peerAddress + " cd " + path + "; java peerProcess " + pInfo.peerId);
+				// If your program is JAVA, use this line. 
+				// Runtime.getRuntime().exec("ssh " + pInfo.peerAddress + " cd " + path + "; java PeerProcess " + pInfo.peerId); // remote
+
+				// To run locally use next three lines
+				ProcessBuilder pb = new ProcessBuilder("java", "PeerProcess", pInfo.peerId);
+				pb.directory(new File(path));
+				Process p = pb.start();
 				
 				// If your program is C/C++, use this line instead of the above line. 
 				//Runtime.getRuntime().exec("ssh " + pInfo.peerAddress + " cd " + path + "; ./peerProcess " + pInfo.peerId);

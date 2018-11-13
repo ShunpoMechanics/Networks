@@ -5,8 +5,9 @@
 
 import java.util.*;
 import java.io.*;
+import java.lang.*;
 
-public class peerProcess {
+public class PeerProcess implements Runnable{
 
 	static int numPieces;
 	static int numPreferredNeighbors;
@@ -15,41 +16,21 @@ public class peerProcess {
 	static String fileToDownload;
 	static int fileSize;
 	static int pieceSize;
+	static int peerID;
+	static String handshakeHeader;
+	private final static byte[] zeroBits = new byte[10];
 
 	// chokedUnchoked key value pair (int peerID, boolean choke)
 	// bitfields key value pair (int peerID, bitSet bitfield)
 
-	public static void main(String[] args) {
-		if (args.length != 1) {
-			System.out.println("Must have one argument for peerID.");
-			System.exit(0);
+	public void run () {
+		// check that threads are running at the same time
+		Log.complete(peerID);
+		for (int i=0; i<10; i++) {
+			System.out.println(peerID + "  " + i);
 		}
-		int peerID = Integer.parseInt(args[0]);
 
-		String st = "";
-		String line;
-		// set variables according to config file
-		try {
-			BufferedReader in = new BufferedReader(new FileReader("Common.cfg"));
-			while((line = in.readLine()) != null) {
-				st += line + " ";
-			}
-			String[] tokens = st.split("\\s+");
-			for (String token : tokens) {
-				System.out.print(token + " ");
-			}
-			numPreferredNeighbors = Integer.parseInt(tokens[1]);
-			unchokingInterval = Integer.parseInt(tokens[3]);
-			optUnchokingInterval = Integer.parseInt(tokens[5]);
-			fileToDownload = tokens[7];
-			fileSize = Integer.parseInt(tokens[9]);
-			pieceSize = Integer.parseInt(tokens[11]);
-			numPieces = (int)Math.ceil((double)fileSize/pieceSize);
-			in.close();
-		}
-		catch (Exception ex) {
-			System.out.println(ex.toString());
-		}
+		// first must connect to all other remote peers
 
 		// while not all pieces have complete file
 		// TCP connection
@@ -75,10 +56,55 @@ public class peerProcess {
 		// when receives piece completely, check bitfields of neightbors and send not interested if necessary
 
 		// for all unchoked, while unchoked, send request message for piece, when piece downloads completely, send another request message, etc
+	}
+
+	
+
+	public static void main(String[] args) {
+		if (args.length != 1) {
+			System.out.println("Must have one argument for peerID.");
+			System.exit(0);
+		}
+		peerID = Integer.parseInt(args[0]);
+		System.out.println("in main: " + peerID);
+
+		handshakeHeader = "P2PFILESHARINGPROJ" + new String(zeroBits) + args[0];
+		
+		String st = "";
+		String line;
+		// set variables according to config file
+		try {
+			BufferedReader in = new BufferedReader(new FileReader("../Common.cfg"));
+			while((line = in.readLine()) != null) {
+				st += line + " ";
+			}
+			String[] tokens = st.split("\\s+");
+			for (String token : tokens) {
+				System.out.print(token + " ");
+			}
+			numPreferredNeighbors = Integer.parseInt(tokens[1]);
+			unchokingInterval = Integer.parseInt(tokens[3]);
+			optUnchokingInterval = Integer.parseInt(tokens[5]);
+			fileToDownload = tokens[7];
+			fileSize = Integer.parseInt(tokens[9]);
+			pieceSize = Integer.parseInt(tokens[11]);
+			numPieces = (int)Math.ceil((double)fileSize/pieceSize);
+			in.close();
+		}
+		catch (Exception ex) {
+			System.out.println(ex.toString());
+		}
+
+		// Start thread
+		Thread t1 = new Thread(new PeerProcess());
+		t1.start();
 
 	}
 
 	// handshake function
+	public void handshake() {
+
+	}
 
 
 	// actual message function - 4-byte message length, 1-byte message type, variable message payload
