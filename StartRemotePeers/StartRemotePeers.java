@@ -74,7 +74,7 @@ public class StartRemotePeers {
 				// Runtime.getRuntime().exec("ssh " + pInfo.peerAddress + " cd " + path + "; java PeerProcess " + pInfo.peerId); // remote
 
 				// To run locally use next three lines
-				ProcessBuilder pb = new ProcessBuilder("java", "PeerProcess", pInfo.peerId);
+				ProcessBuilder pb = new ProcessBuilder("java", "peerProcess", pInfo.peerId);
 				pb.directory(new File(path));
 				Process p = pb.start();
 				

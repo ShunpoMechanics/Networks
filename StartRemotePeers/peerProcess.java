@@ -7,7 +7,7 @@ import java.util.*;
 import java.io.*;
 import java.lang.*;
 
-public class PeerProcess implements Runnable{
+public class peerProcess implements Runnable{
 
 	static int numPieces;
 	static int numPreferredNeighbors;
@@ -96,7 +96,7 @@ public class PeerProcess implements Runnable{
 		}
 
 		// Start thread
-		Thread t1 = new Thread(new PeerProcess());
+		Thread t1 = new Thread(new peerProcess());
 		t1.start();
 
 	}
