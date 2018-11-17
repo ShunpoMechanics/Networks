@@ -1,0 +1,9 @@
+<component name="libraryTable">
+  <library name="StartRemotePeers">
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/StartRemotePeers.zip!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>

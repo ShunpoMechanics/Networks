@@ -11,12 +11,12 @@ import java.util.Scanner;
  */
 public class CommonConfigReader {
 
-//    A simple main to test this class.
-    public static void main(String args[]) throws IOException {
-        CommonConfigReader ss = new CommonConfigReader("Common.cfg");
+    //    A simple main to test this class.
+    /*public static void main(String args[]) throws IOException {
+        CommonConfigReader ss = new CommonConfigReader("../testCommon.cfg");
         Flags.print("Test main of CommonConfigReader finished", Flags.Debug.INFO);
     }
-
+*/
     final int numberOfPreferredNeighbors;
     final int unchokingInterval;
     final int optimisticUnchokingInterval;
@@ -28,7 +28,7 @@ public class CommonConfigReader {
      * Reads the Common.cfg file.
      * @param configFilePath
      * @throws FileNotFoundException
-     * @throws IOException 
+     * @throws IOException
      */
     public CommonConfigReader(String configFilePath) throws FileNotFoundException, IOException {
         BufferedReader br = new BufferedReader(new FileReader(configFilePath));
