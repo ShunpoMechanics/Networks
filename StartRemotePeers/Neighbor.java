@@ -44,4 +44,16 @@ public class Neighbor {
     public void setDownloadRate(int downloadRate) {
         this.downloadRate = downloadRate;
     }
+
+    public int getListeningPort() {
+    	return this.listeningPort;
+    }
+
+    public boolean hasFile() {
+    	return (this.hasFile == 1);
+    }
+
+    public void setFileComplete() {
+    	this.hasFile = 1;
+    }
 }

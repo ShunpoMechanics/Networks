@@ -6,16 +6,18 @@
 import java.util.*;
 import java.io.*;
 import java.lang.*;
+//import CommonConfigReader;
+//import PeerInfoReader;
 
 public class peerProcess implements Runnable{
 
-	static int numPieces;
+/*	static int numPieces;
 	static int numPreferredNeighbors;
 	static int unchokingInterval;
 	static int optUnchokingInterval;
 	static String fileToDownload;
 	static int fileSize;
-	static int pieceSize;
+	static int pieceSize;*/
 	static int peerID;
 	static String handshakeHeader;
 	private final static byte[] zeroBits = new byte[10];
@@ -24,16 +26,25 @@ public class peerProcess implements Runnable{
 	// bitfields key value pair (int peerID, bitSet bitfield)
 
 	public void run () {
-		// check that threads are running at the same time
-		Log.complete(peerID);
-		for (int i=0; i<10; i++) {
-			System.out.println(peerID + "  " + i);
-		}
 
 		// first must connect to all other remote peers
+		try {
+			PeerInfoReader pir = new PeerInfoReader("../PeerInfo.cfg");
+			int listentingPort = pir.neighbors.get(peerID).getListeningPort();
 
-		// while not all pieces have complete file
-		// TCP connection
+
+			// while not all pieces have complete file
+			while (!allHaveCompleteFile(pir.neighbors)) { //this will currently cause infinite loop since we aren't passing files yet
+
+			} 
+		} catch (FileNotFoundException e) {
+			e.printStackTrace(System.out);
+		} catch (IOException e) {
+			e.printStackTrace(System.out);
+		}
+
+
+		// TCP connection 
 		// send handshake
 		// receive and check handshake (check if header is right, expected peer ID)
 		// send bitfield if has pieces
@@ -70,7 +81,7 @@ public class peerProcess implements Runnable{
 
 		handshakeHeader = "P2PFILESHARINGPROJ" + new String(zeroBits) + args[0];
 		
-		String st = "";
+/*		String st = "";
 		String line;
 		// set variables according to config file
 		try {
@@ -93,6 +104,14 @@ public class peerProcess implements Runnable{
 		}
 		catch (Exception ex) {
 			System.out.println(ex.toString());
+		}*/
+
+		try {
+			CommonConfigReader ccr = new CommonConfigReader("../Common.cfg");
+		} catch (FileNotFoundException e) {
+			e.printStackTrace(System.out);
+		} catch (IOException e) {
+			e.printStackTrace(System.out);
 		}
 
 		// Start thread
@@ -135,7 +154,10 @@ public class peerProcess implements Runnable{
 
 	// piece - message type 7, payload is 4-byte piece index field and content of piece
 
-	public static boolean hasCompleteFile(int id) {
+	public static boolean allHaveCompleteFile(HashMap<Integer, Neighbor> peers) {
+		for (Neighbor n : peers.values()) {
+			if (!n.hasFile()) return false;
+		}
 		return true;
 	}
 
@@ -143,14 +165,14 @@ public class peerProcess implements Runnable{
 
 	}
 
-	public static int [] determinePreferredNeighbors() {
-		int [] neighbors = new int [numPreferredNeighbors]; // (k)
-		// if has complete file, determine peers randomly
-		// for all interested neighbors (check from peerInfoVector)
-		// calculate download rate and keep track of top k, settle ties randomly
+	// public static int [] determinePreferredNeighbors() {
+	// 	int [] neighbors = new int [numPreferredNeighbors]; // (k)
+	// 	// if has complete file, determine peers randomly
+	// 	// for all interested neighbors (check from peerInfoVector)
+	// 	// calculate download rate and keep track of top k, settle ties randomly
 
-		return neighbors;
-	}
+	// 	return neighbors;
+	// }
 
 	public static void requestPiece(int id) {
 		int piece;

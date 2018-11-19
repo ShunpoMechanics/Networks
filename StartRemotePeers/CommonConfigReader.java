@@ -26,6 +26,7 @@ public class CommonConfigReader {
     final String fileName;
     final long fileSize;
     final long pieceSize;
+    final int numPieces;
 
     /**
      * Reads the Common.cfg file.
@@ -49,6 +50,8 @@ public class CommonConfigReader {
         fileSize = sc.nextLong();
         sc.next();
         pieceSize = sc.nextLong();
+
+        numPieces = (int) Math.ceil(fileSize/(float)pieceSize);
 
         Flags.print("Finished reading " + configFilePath, Flags.Debug.INFO);
         Flags.print(this.toString(), Flags.Debug.INFO);

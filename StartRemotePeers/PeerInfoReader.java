@@ -14,7 +14,7 @@ import java.util.*;
 public class PeerInfoReader {
 
     public static void main(String args[]) throws IOException {
-        PeerInfoReader ss = new PeerInfoReader("Common.cfg");
+        PeerInfoReader ss = new PeerInfoReader("../PeerInfo.cfg");
     }
     
     HashMap<Integer, Neighbor> neighbors;
