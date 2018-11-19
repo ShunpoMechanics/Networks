@@ -6,41 +6,43 @@
 import java.util.*;
 import java.io.*;
 import java.lang.*;
-//import CommonConfigReader;
-//import PeerInfoReader;
+import java.net.*;
 
-public class peerProcess implements Runnable{
-
-/*	static int numPieces;
-	static int numPreferredNeighbors;
-	static int unchokingInterval;
-	static int optUnchokingInterval;
-	static String fileToDownload;
-	static int fileSize;
-	static int pieceSize;*/
+public class peerProcess implements Runnable {
 	static int peerID;
 	static String handshakeHeader;
 	private final static byte[] zeroBits = new byte[10];
+	PeerInfoReader pir;
 
 	// chokedUnchoked key value pair (int peerID, boolean choke)
 	// bitfields key value pair (int peerID, bitSet bitfield)
 
 	public void run () {
-
-		// first must connect to all other remote peers
 		try {
-			PeerInfoReader pir = new PeerInfoReader("../PeerInfo.cfg");
-			int listentingPort = pir.neighbors.get(peerID).getListeningPort();
-
-
-			// while not all pieces have complete file
-			while (!allHaveCompleteFile(pir.neighbors)) { //this will currently cause infinite loop since we aren't passing files yet
-
-			} 
+			pir = new PeerInfoReader("../PeerInfo.cfg");
 		} catch (FileNotFoundException e) {
 			e.printStackTrace(System.out);
 		} catch (IOException e) {
 			e.printStackTrace(System.out);
+		}
+		int listentingPort = pir.neighbors.get(peerID).getListeningPort();
+		ServerSocket listenSocket = null;
+		// first must connect to all other remote peers
+		try {
+			listenSocket = new ServerSocket(listentingPort);
+			for (HashMap.Entry<Integer, Neighbor> entry : pir.neighbors.entrySet()) {
+			    if (entry.getKey() != peerID) { // only try to connect to peers not self
+			    	new Handler(listenSocket.accept(),entry.getKey()).start();
+			    }
+			}
+		} catch (IOException e) {
+			e.printStackTrace(System.out);
+		} finally {
+			try {
+				if (listenSocket != null) listenSocket.close();
+			} catch (IOException e) {
+				e.printStackTrace(System.out);
+			}
 		}
 
 
@@ -80,31 +82,6 @@ public class peerProcess implements Runnable{
 		System.out.println("in main: " + peerID);
 
 		handshakeHeader = "P2PFILESHARINGPROJ" + new String(zeroBits) + args[0];
-		
-/*		String st = "";
-		String line;
-		// set variables according to config file
-		try {
-			BufferedReader in = new BufferedReader(new FileReader("../Common.cfg"));
-			while((line = in.readLine()) != null) {
-				st += line + " ";
-			}
-			String[] tokens = st.split("\\s+");
-			for (String token : tokens) {
-				System.out.print(token + " ");
-			}
-			numPreferredNeighbors = Integer.parseInt(tokens[1]);
-			unchokingInterval = Integer.parseInt(tokens[3]);
-			optUnchokingInterval = Integer.parseInt(tokens[5]);
-			fileToDownload = tokens[7];
-			fileSize = Integer.parseInt(tokens[9]);
-			pieceSize = Integer.parseInt(tokens[11]);
-			numPieces = (int)Math.ceil((double)fileSize/pieceSize);
-			in.close();
-		}
-		catch (Exception ex) {
-			System.out.println(ex.toString());
-		}*/
 
 		try {
 			CommonConfigReader ccr = new CommonConfigReader("../Common.cfg");
@@ -119,6 +96,61 @@ public class peerProcess implements Runnable{
 		t1.start();
 
 	}
+
+		/**
+     	* A handler thread class.  Handlers are spawned from the listening
+     	* loop and are responsible for dealing with a single client's requests.
+     	*/
+    	private class Handler extends Thread {
+        	private String message;    //message received from the client
+			private String MESSAGE;    //uppercase message send to the client
+			private Socket connection;
+        	private ObjectInputStream in;	//stream read from the socket
+        	private ObjectOutputStream out;    //stream write to the socket
+			private int no;		//The index number of the client
+
+        	public Handler(Socket connection, int no) {
+            	this.connection = connection;
+	    		this.no = no;
+        	}
+
+	        public void run() {
+		 		try{
+					//initialize Input and Output streams
+					out = new ObjectOutputStream(connection.getOutputStream());
+					out.flush();
+					in = new ObjectInputStream(connection.getInputStream());
+					try{
+						// while not all pieces have complete file
+						while (!allHaveCompleteFile(pir.neighbors)) { //this will currently cause infinite loop since we aren't passing files yet
+							//receive the message sent from the client
+							message = (String)in.readObject();
+							//show the message to the user
+							System.out.println("Receive message: " + message + " from client " + no);
+							//Capitalize all letters in the message
+							MESSAGE = message.toUpperCase();
+							//send MESSAGE back to the client
+							//sendMessage(MESSAGE);
+						}
+					} catch(ClassNotFoundException classnot){
+						System.err.println("Data received in unknown format");
+					}
+				} catch(IOException ioException){
+					System.out.println("Disconnect with Client " + no);
+				}
+				finally{
+					//Close connections
+					try{
+						in.close();
+						out.close();
+						connection.close();
+					}
+					catch(IOException ioException){
+						System.out.println("Disconnect with Client " + no);
+					}
+				}
+			}
+		}
 
 	// handshake function
 	public void handshake() {
