@@ -31,6 +31,10 @@ public class Neighbor {
         this.id = id;
     }
 
+    public String getHostname() {
+    	return this.hostname;
+    }
+
     /**
      * @return the downloadRate
      */
