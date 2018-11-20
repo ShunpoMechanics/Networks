@@ -18,22 +18,41 @@ public class peerProcess implements Runnable {
 	// bitfields key value pair (int peerID, bitSet bitfield)
 
 	public void run () {
+		Log.writeLog(peerID, " in main run of peerProcess");
+		System.out.println(" in peer process run");
 		try {
-			pir = new PeerInfoReader("../PeerInfo.cfg");
+			pir = new PeerInfoReader("../LocalPeerInfo.cfg");
+			Log.writeLog(peerID, " pir neighbors created");
+			System.out.println(" created peer info reader");
 		} catch (FileNotFoundException e) {
 			e.printStackTrace(System.out);
+			Log.writeLog(peerID, " couldn't find LocalPeerInfo file ");
 		} catch (IOException e) {
 			e.printStackTrace(System.out);
+			Log.writeLog(peerID, " IOException ");
 		}
+		Log.writeLog(peerID, " after first try/catch ");
 		int listentingPort = pir.neighbors.get(peerID).getListeningPort();
 		ServerSocket listenSocket = null;
 		// first must connect to all other remote peers
 		try {
 			listenSocket = new ServerSocket(listentingPort);
+			// peer acting as client to other peers
+			String m;
 			for (HashMap.Entry<Integer, Neighbor> entry : pir.neighbors.entrySet()) {
+				Log.writeLog(peerID, " in for loop iterating over HashMap");
 			    if (entry.getKey() != peerID) { // only try to connect to peers not self
-			    	new Handler(listenSocket.accept(),entry.getKey()).start();
+			    	Thread clientThread = new Thread(new PeerAsClient(entry.getValue())); // need new thread for every client
+			    	clientThread.start();
+			    	m = " Trying to connect to " + entry.getValue().getId();
+			    	Log.writeLog(peerID, m);
 			    }
+			}
+			int clientNum = 1;
+			long startTime = System.currentTimeMillis(); //start time
+			while(true && (System.currentTimeMillis()-startTime)<10000) { // peer's server process - will quit after 10 seconds
+				new Handler(listenSocket.accept()).start(); 
+				clientNum++;
 			}
 		} catch (IOException e) {
 			e.printStackTrace(System.out);
@@ -97,32 +116,42 @@ public class peerProcess implements Runnable {
 
 	}
 
-		/**
-     	* A handler thread class.  Handlers are spawned from the listening
-     	* loop and are responsible for dealing with a single client's requests.
-     	*/
-    	private class Handler extends Thread {
-        	private String message;    //message received from the client
-			private String MESSAGE;    //uppercase message send to the client
-			private Socket connection;
-        	private ObjectInputStream in;	//stream read from the socket
-        	private ObjectOutputStream out;    //stream write to the socket
-			private int no;		//The index number of the client
+	/**
+ 	* A handler thread class.  Handlers are spawned from the listening
+ 	* loop and are responsible for dealing with a single client's requests.
+ 	*/
+	private class Handler extends Thread { // server to client
+    	private String message;    //message received from the client
+		private String MESSAGE;    //uppercase message send to the client
+		private Socket connection;
+    	private ObjectInputStream in;	//stream read from the socket
+    	private ObjectOutputStream out;    //stream write to the socket
+		private int no = 0000;		//The index number of the client
 
-        	public Handler(Socket connection, int no) {
-            	this.connection = connection;
-	    		this.no = no;
-        	}
+    	public Handler(Socket connection) {
+        	this.connection = connection;
+    	}
 
-	        public void run() {
-		 		try{
-					//initialize Input and Output streams
-					out = new ObjectOutputStream(connection.getOutputStream());
-					out.flush();
-					in = new ObjectInputStream(connection.getInputStream());
-					try{
+        public void run() {
+	 		try{
+				//initialize Input and Output streams
+				out = new ObjectOutputStream(connection.getOutputStream());
+				out.flush();
+				in = new ObjectInputStream(connection.getInputStream());
+				try{
+					// handshake
+					System.out.println("Waiting for message from client");
+					message = (String)in.readObject();
+					System.out.println("got message from client");
+					Log.TCPfrom(no, peerID);
+					if (message.substring(0, message.length()-4).equals("P2PFILESHARINGPROJ" + new String(zeroBits))) {
+						no = Integer.parseInt(message.substring(message.length()-4));
+						MESSAGE = handshakeHeader;
+						sendMessage(MESSAGE);
+						Log.TCPfrom(no, peerID);
 						// while not all pieces have complete file
-						while (!allHaveCompleteFile(pir.neighbors)) { //this will currently cause infinite loop since we aren't passing files yet
+						// could set this while loop on a timer for testing purposes
+/*						while (!allHaveCompleteFile(pir.neighbors)) { //this will currently cause infinite loop since we aren't passing files yet
 							//receive the message sent from the client
 							message = (String)in.readObject();
 							//show the message to the user
@@ -130,27 +159,136 @@ public class peerProcess implements Runnable {
 							//Capitalize all letters in the message
 							MESSAGE = message.toUpperCase();
 							//send MESSAGE back to the client
-							//sendMessage(MESSAGE);
-						}
-					} catch(ClassNotFoundException classnot){
-						System.err.println("Data received in unknown format");
+							sendMessage(MESSAGE);
+						}*/
 					}
-				} catch(IOException ioException){
-					System.out.println("Disconnect with Client " + no);
+
+
+				} catch(ClassNotFoundException classnot){
+					System.err.println("Data received in unknown format");
 				}
-				finally{
-					//Close connections
-					try{
-						in.close();
-						out.close();
-						connection.close();
-					}
-					catch(IOException ioException){
-						System.out.println("Disconnect with Client " + no);
-					}
+			} catch(IOException ioException){
+				System.out.println("Disconnect with Client " + no);
+			}
+			finally{
+				//Close connections
+				try{
+					in.close();
+					out.close();
+					connection.close();
+				}
+				catch(IOException ioException){
+					System.out.println("Disconnect with Client " + no);
 				}
 			}
 		}
+
+		//send a message to the output stream
+		void sendMessage(String msg)
+		{
+			try{
+				//stream write the message
+				out.writeObject(msg);
+				out.flush();
+			}
+			catch(IOException ioException){
+				ioException.printStackTrace();
+			}
+		}
+	}
+
+	public class PeerAsClient implements Runnable { // client to server
+		Socket requestSocket;           //socket connect to the server
+		ObjectOutputStream out;         //stream write to the socket
+	 	ObjectInputStream in;          //stream read from the socket
+		String message;                //message send to the server
+		String MESSAGE;                //capitalized message read from the server
+		String ip;
+		int port;
+		int serverID;
+		String serverHandshakeHeader;
+
+		public PeerAsClient(Neighbor server) { // the ip and port of the peer it wants to connect to
+			serverID = server.getId();
+			ip = server.getHostname();
+			port = server.getListeningPort();
+			serverHandshakeHeader = "P2PFILESHARINGPROJ" + new String(zeroBits) + serverID;
+		}
+
+		public void run()
+		{
+			try{
+				//create a socket to connect to the server
+				requestSocket = new Socket(ip, port);
+				System.out.println("Connected to " + ip + " in port " + port);
+				//initialize inputStream and outputStream
+				out = new ObjectOutputStream(requestSocket.getOutputStream());
+				out.flush();
+				in = new ObjectInputStream(requestSocket.getInputStream());
+				
+				//get Input from standard input
+				BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(System.in));
+				System.out.println("Writing message to server");
+				// handshake
+				message = handshakeHeader;
+				sendMessage(message);
+				Log.TCPto(peerID, serverID);
+				MESSAGE = (String)in.readObject();
+				if (MESSAGE.equals(serverHandshakeHeader)) {
+					Log.TCPto(peerID, serverID);
+					// could set this while loop on a timer for testing purposes
+/*					while(true)
+					{
+						System.out.print("Hello, please input a sentence: ");
+						//read a sentence from the standard input
+						message = bufferedReader.readLine();
+						//Send the sentence to the server
+						sendMessage(message);
+						//Receive the upperCase sentence from the server
+						MESSAGE = (String)in.readObject();
+						//show the message to the user
+						System.out.println("Receive message: " + MESSAGE);
+					}*/
+				}
+				
+			}
+			catch (ConnectException e) {
+	    			System.err.println("Connection refused. You need to initiate a server first.");
+			} 
+			catch (ClassNotFoundException e) {
+	            		System.err.println("Class not found");
+	        	} 
+			catch (UnknownHostException unknownHost) {
+				System.err.println("You are trying to connect to an unknown host!");
+			}
+			catch (IOException ioException) {
+				ioException.printStackTrace();
+			}
+			finally{
+				//Close connections
+				try{
+					if (in != null) in.close();
+					if (out != null) out.close();
+					if (requestSocket != null) requestSocket.close();
+				}
+				catch (IOException ioException) {
+					ioException.printStackTrace();
+				}
+			}
+		}
+		//send a message to the output stream
+		void sendMessage(String msg)
+		{
+			try{
+				//stream write the message
+				out.writeObject(msg);
+				out.flush();
+			}
+			catch (IOException ioException) {
+				ioException.printStackTrace();
+			}
+		}
+	}
 
 	// handshake function
 	public void handshake() {
