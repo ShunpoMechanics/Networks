@@ -14,10 +14,10 @@ import java.util.*;
 public class PeerInfoReader {
 
     public static void main(String args[]) throws IOException {
-        PeerInfoReader ss = new PeerInfoReader("../PeerInfo.cfg");
+        PeerInfoReader ss = new PeerInfoReader("../LocalPeerInfo.cfg");
     }
     
-    HashMap<Integer, Neighbor> neighbors;
+    HashMap<Integer, Neighbor> neighbors = new HashMap<Integer, Neighbor>();
 
     public PeerInfoReader(String peerInfoFilePath) throws FileNotFoundException, IOException {
         BufferedReader br = new BufferedReader(new FileReader(peerInfoFilePath));
