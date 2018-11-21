@@ -7,15 +7,20 @@
 /**
  *
  * @author Tima Tavassoli (ftavassoli@ufl.edu)
+ * @author Kim Ying (kimying@ufl.edu)
  */
-public class Neighbor {
 
+import java.util.*;
+
+public class Neighbor {
+	private final static byte[] zeroBits = new byte[10];
     int id;
     String hostname;
     int listeningPort;
     int hasFile;
-    
+    boolean connected = false;
     int downloadRate;
+    BitSet pieces;
 
     /**
      * @return the id
@@ -59,5 +64,33 @@ public class Neighbor {
 
     public void setFileComplete() {
     	this.hasFile = 1;
+    }
+
+    public void setConnection(boolean connect) {
+    	this.connected = connect;
+    }
+
+    public boolean isConnected() {
+    	return this.connected;
+    }
+
+    public String getHandshakeHeader() {
+    	return "P2PFILESHARINGPROJ" + new String(zeroBits) + this.id;
+    }
+
+    public void initializePieceSet(int size) {
+    	this.pieces = new BitSet(size);
+    	if (this.hasFile()) { // if has complete file, set all bits to true
+    		pieces.set(0, size);
+    	}
+    }
+
+    public void setPieceIndex(int index) {
+    	pieces.set(index);
+    }
+
+    // this is called whenever a peer receives "have" message from neighbor
+    public void updatePieceSet(BitSet bitset) {
+    	this.pieces = bitset;
     }
 }

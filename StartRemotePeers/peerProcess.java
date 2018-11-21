@@ -13,25 +13,21 @@ public class peerProcess implements Runnable {
 	static String handshakeHeader;
 	private final static byte[] zeroBits = new byte[10];
 	PeerInfoReader pir;
-
-	// chokedUnchoked key value pair (int peerID, boolean choke)
-	// bitfields key value pair (int peerID, bitSet bitfield)
+	CommonConfigReader ccr;
 
 	public void run () {
-		Log.writeLog(peerID, " in main run of peerProcess");
-		System.out.println(" in peer process run");
 		try {
 			pir = new PeerInfoReader("../LocalPeerInfo.cfg");
-			Log.writeLog(peerID, " pir neighbors created");
-			System.out.println(" created peer info reader");
+			// Log.writeLog(peerID, " pir neighbors created");
+			// System.out.println(" created peer info reader");
 		} catch (FileNotFoundException e) {
 			e.printStackTrace(System.out);
-			Log.writeLog(peerID, " couldn't find LocalPeerInfo file ");
+			// Log.writeLog(peerID, " couldn't find LocalPeerInfo file ");
 		} catch (IOException e) {
 			e.printStackTrace(System.out);
-			Log.writeLog(peerID, " IOException ");
+			// Log.writeLog(peerID, " IOException ");
 		}
-		Log.writeLog(peerID, " after first try/catch ");
+		// Log.writeLog(peerID, " after first try/catch ");
 		int listentingPort = pir.neighbors.get(peerID).getListeningPort();
 		ServerSocket listenSocket = null;
 		// first must connect to all other remote peers
@@ -40,12 +36,14 @@ public class peerProcess implements Runnable {
 			// peer acting as client to other peers
 			String m;
 			for (HashMap.Entry<Integer, Neighbor> entry : pir.neighbors.entrySet()) {
-				Log.writeLog(peerID, " in for loop iterating over HashMap");
-			    if (entry.getKey() != peerID) { // only try to connect to peers not self
+				// Log.writeLog(peerID, " in for loop iterating over HashMap");
+				// set bitfield for every peer
+				entry.getValue().initializePieceSet(ccr.numPieces);
+			    if ((entry.getKey() != peerID) && entry.getValue().isConnected()) { // only try to connect to peers not self and peers that aren't already connected
 			    	Thread clientThread = new Thread(new PeerAsClient(entry.getValue())); // need new thread for every client
 			    	clientThread.start();
-			    	m = " Trying to connect to " + entry.getValue().getId();
-			    	Log.writeLog(peerID, m);
+			    	// m = " Trying to connect to " + entry.getValue().getId();
+			    	// Log.writeLog(peerID, m);
 			    }
 			}
 			int clientNum = 1;
@@ -103,7 +101,7 @@ public class peerProcess implements Runnable {
 		handshakeHeader = "P2PFILESHARINGPROJ" + new String(zeroBits) + args[0];
 
 		try {
-			CommonConfigReader ccr = new CommonConfigReader("../Common.cfg");
+			ccr = new CommonConfigReader("../Common.cfg");
 		} catch (FileNotFoundException e) {
 			e.printStackTrace(System.out);
 		} catch (IOException e) {
@@ -140,10 +138,10 @@ public class peerProcess implements Runnable {
 				in = new ObjectInputStream(connection.getInputStream());
 				try{
 					// handshake
-					System.out.println("Waiting for message from client");
+					// System.out.println("Waiting for message from client");
 					message = (String)in.readObject();
-					System.out.println("got message from client");
-					Log.TCPfrom(no, peerID);
+					// System.out.println("got message from client");
+					// Log.TCPfrom(no, peerID);
 					if (message.substring(0, message.length()-4).equals("P2PFILESHARINGPROJ" + new String(zeroBits))) {
 						no = Integer.parseInt(message.substring(message.length()-4));
 						MESSAGE = handshakeHeader;
@@ -173,9 +171,9 @@ public class peerProcess implements Runnable {
 			finally{
 				//Close connections
 				try{
-					in.close();
-					out.close();
-					connection.close();
+					if (in != null) in.close();
+					if (out != null) out.close();
+					if (connection != null) connection.close();
 				}
 				catch(IOException ioException){
 					System.out.println("Disconnect with Client " + no);
