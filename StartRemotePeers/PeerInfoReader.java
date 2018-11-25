@@ -1,3 +1,4 @@
+
 import java.io.*;
 import java.util.*;
 
@@ -7,19 +8,15 @@ import java.util.*;
  */
 public class PeerInfoReader {
 
-    public static void main(String args[]) throws IOException {
-        PeerInfoReader ss = new PeerInfoReader("PeerInfo.cfg");
-    }
-    
     /**
-     *   List of all peers from the Common.
+     * List of all PEERS from the configuration file.
      */
-    public static final HashMap<Integer, Peer> peers = new HashMap<>();
+    public static final HashMap<Integer, Peer> PEERS = new HashMap<>();
 
     public PeerInfoReader(String peerInfoFilePath) throws FileNotFoundException, IOException {
         BufferedReader br = new BufferedReader(new FileReader(peerInfoFilePath));
 
-        String line = "";
+        String line;
         while ((line = br.readLine()) != null) {
             String[] tokens = line.split(" ");
             Peer n = new Peer();
@@ -27,7 +24,7 @@ public class PeerInfoReader {
             n.hostname = tokens[1];
             n.listeningPort = Integer.parseInt(tokens[2]);
             n.hasFile = Integer.parseInt(tokens[3]);
-            peers.put(n.pid, n);
+            PEERS.put(n.pid, n);
         }
 
         Flags.print("Finished reading " + peerInfoFilePath, Flags.Debug.INFO);

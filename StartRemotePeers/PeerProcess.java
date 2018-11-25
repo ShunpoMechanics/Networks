@@ -5,7 +5,6 @@ import java.io.ObjectOutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.HashMap;
-import java.util.concurrent.ThreadLocalRandom;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -15,6 +14,39 @@ import java.util.logging.Logger;
  */
 public class PeerProcess implements Runnable {
 
+    /**
+     * PeerProcess is the entry point of this program.
+     *
+     * @param args
+     * @throws IOException
+     */
+    public static void main(String args[]) throws IOException {
+        // Make sure the input has a peer ID argument.
+        if (args.length < 1 || args[0].isEmpty() || !Character.isDigit(args[0].charAt(0))) {
+            System.err.println("Invalid input args, please pass a peerID.");
+            System.exit(1);
+        }
+
+        // Read and parse PeerInfo.cfg into PeerInfoReader.PEERS.
+        PeerInfoReader pir = new PeerInfoReader("PeerInfo.cfg");
+        if (PeerInfoReader.PEERS.isEmpty()) {
+            System.err.println("PEERS mapping is empty, PeerInfoReader failed.");
+            System.exit(1);
+        }
+        
+        // Check validity of input pid.
+        int pid = Integer.parseInt(args[0]);
+        if (!PeerInfoReader.PEERS.containsKey(pid)) {
+            System.err.println("The provided peerID does not exist in the PeerInfo.cfg file.");
+            System.exit(1);
+        }
+
+        // Start the peer process.
+        PeerProcess pp = new PeerProcess(pid);
+        Thread t = new Thread(pp);
+        t.start();
+    }
+
     public volatile boolean isAlive;
     private ServerSocket listener;
     private final int pid;
@@ -22,7 +54,7 @@ public class PeerProcess implements Runnable {
     public PeerProcess(int pid) throws IOException {
         this.pid = pid;
         // Get the current peer's information from PeerInfoReader.
-        Peer current_peer = PeerInfoReader.peers.get(pid);
+        Peer current_peer = PeerInfoReader.PEERS.get(pid);
         if (current_peer == null) {
             System.out.println("Peer information not found: " + current_peer);
             System.exit(1);
@@ -35,9 +67,9 @@ public class PeerProcess implements Runnable {
         // The server part of the peer process:
         try {
             // Start this peer's listening server.
-            listener = new ServerSocket(PeerInfoReader.peers.get(pid).listeningPort);
+            listener = new ServerSocket(PeerInfoReader.PEERS.get(pid).listeningPort);
         } catch (IOException ex) {
-            System.out.println("Failed to listen on " + PeerInfoReader.peers.get(pid).listeningPort);
+            System.out.println("Failed to listen on " + PeerInfoReader.PEERS.get(pid).listeningPort);
             Logger.getLogger(PeerProcess.class.getName()).log(Level.SEVERE, null, ex);
             System.exit(1);
         }
@@ -45,7 +77,7 @@ public class PeerProcess implements Runnable {
         // TODO.
 
         // The client part of the peer process:
-        // Connect to other peers.
+        // Connect to other PEERS.
         HashMap<Integer, Connection> pid_2_conn = connectToOthers();
         // Perform handshake.
         for (Integer id : pid_2_conn.keySet()) {
@@ -87,16 +119,16 @@ public class PeerProcess implements Runnable {
 
     private HashMap<Integer, Connection> connectToOthers() {
         HashMap<Integer, Connection> pid_2_conn = new HashMap<>();
-        // Connect to other peers with pid lower than this peer's pid.
-        for (Integer id : PeerInfoReader.peers.keySet()) {
+        // Connect to other PEERS with pid lower than this peer's pid.
+        for (Integer id : PeerInfoReader.PEERS.keySet()) {
             if (id < pid) {
-                Peer neighbor = PeerInfoReader.peers.get(id);
+                Peer neighbor = PeerInfoReader.PEERS.get(id);
                 try {
                     Socket s = new Socket(neighbor.hostname, neighbor.listeningPort);
                     Connection conn = new Connection(s,
                             new ObjectOutputStream(s.getOutputStream()),
                             new ObjectInputStream(s.getInputStream()));
-                    // Keep track of connected peers.
+                    // Keep track of connected PEERS.
                     pid_2_conn.put(id, conn);
                 } catch (IOException ex) {
                     System.out.println("Socket creation to " + neighbor.hostname + ":" + neighbor.listeningPort + " failed");
