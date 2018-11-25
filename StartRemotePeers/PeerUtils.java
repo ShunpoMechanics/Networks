@@ -12,10 +12,10 @@ import java.util.*;
  */
 public class PeerUtils {
 
-    public static List<Neighbor> choosePreferredNeighbors(int k, List<Neighbor> neighbors) {
-        List<Neighbor> preferredNeighbors = new ArrayList<>(k);
+    public static List<Peer> choosePreferredNeighbors(int k, List<Peer> neighbors) {
+        List<Peer> preferredNeighbors = new ArrayList<>(k);
         // Sort based on download rates in descending order.
-        Collections.sort(neighbors, Comparator.comparing(Neighbor::getDownloadRate).reversed());
+        Collections.sort(neighbors, Comparator.comparing(Peer::getDownloadRate).reversed());
         // Take the top K.
         for (int i = 0; i < k; i++) {
            preferredNeighbors.add(neighbors.get(i));

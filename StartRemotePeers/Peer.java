@@ -8,9 +8,9 @@
  *
  * @author Tima Tavassoli (ftavassoli@ufl.edu)
  */
-public class Neighbor {
+public class Peer {
 
-    int id;
+    int pid;
     String hostname;
     int listeningPort;
     int hasFile;
@@ -18,17 +18,17 @@ public class Neighbor {
     int downloadRate;
 
     /**
-     * @return the id
+     * @return the pid
      */
-    public int getId() {
-        return id;
+    public int getPid() {
+        return pid;
     }
 
     /**
-     * @param id the id to set
+     * @param pid the pid to set
      */
-    public void setId(int id) {
-        this.id = id;
+    public void setPid(int pid) {
+        this.pid = pid;
     }
 
     /**
