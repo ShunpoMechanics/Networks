@@ -13,6 +13,8 @@ public class Connection {
     ObjectOutputStream out;
     ObjectInputStream in;
     Status status;
+    // The pid of the other side of this connection, defaults to -1 until handshake message is received.
+    int pid;
 
     public enum Status {
         HANDSHAKE,
@@ -24,6 +26,7 @@ public class Connection {
         this.out = out;
         this.in = in;
         status = Status.HANDSHAKE;
+        pid = -1;
     }
 
 }

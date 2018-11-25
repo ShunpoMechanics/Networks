@@ -16,4 +16,16 @@ public class HandshakeMessage {
         this.pid = pid;
     }
 
+    public static void verifyHandshakeMessage(Object obj) {
+        try {
+            HandshakeMessage msg = (HandshakeMessage) obj;
+            if (!msg.header.equals("P2PFILESHARINGPROJ")) {
+                throw new Exception("Wrong header");
+            }
+        } catch (Exception e) {
+            System.out.println("Could not verify HandshakeMessage");
+            System.exit(1);
+        }
+    }
+
 }
