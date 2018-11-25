@@ -16,7 +16,7 @@ public class CommonConfigReader {
         CommonConfigReader ss = new CommonConfigReader("../testCommon.cfg");
         Flags.print("Test main of CommonConfigReader finished", Flags.Debug.INFO);
     }
-*/
+     */
     final int numberOfPreferredNeighbors;
     final int unchokingInterval;
     final int optimisticUnchokingInterval;
@@ -26,6 +26,7 @@ public class CommonConfigReader {
 
     /**
      * Reads the Common.cfg file.
+     *
      * @param configFilePath
      * @throws FileNotFoundException
      * @throws IOException
