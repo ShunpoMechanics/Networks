@@ -87,7 +87,8 @@ public class PeerProcess implements Runnable {
                     try {
                         Object response = c.in.readObject();
                         if (response != null) {
-                            HandshakeMessage.verifyHandshakeMessage(response);
+                            HandshakeMessage.verifyHandshakeMessage(response, c);
+                            // If verification was successful, change status to ESTABLISHED and set the pid for the connection.
                             c.status = Connection.Status.ESTABLISHED;
                             c.pid = ((HandshakeMessage) response).pid;
                             // Send bitfield.

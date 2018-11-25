@@ -16,11 +16,22 @@ public class HandshakeMessage {
         this.pid = pid;
     }
 
-    public static void verifyHandshakeMessage(Object obj) {
+    public static void verifyHandshakeMessage(Object obj, Connection fromConn) {
         try {
             HandshakeMessage msg = (HandshakeMessage) obj;
             if (!msg.header.equals("P2PFILESHARINGPROJ")) {
                 throw new Exception("Wrong header");
+            }
+            Peer p = PeerInfoReader.PEERS.get(msg.pid);
+            String expected = p.hostname;
+            String target = fromConn.socket.getInetAddress().getHostName();
+            if (!expected.equals(target)) {
+                throw new Exception("Handshake received from hostname " + target + ", expected was " + expected);
+            }
+            int expected_port = p.listeningPort;
+            int target_port = fromConn.socket.getPort();
+            if (expected_port != target_port) {
+                throw new Exception("Handshake received from port " + target_port + ", expected was " + expected_port);
             }
         } catch (Exception e) {
             System.out.println("Could not verify HandshakeMessage");
