@@ -3,6 +3,7 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.nio.file.Files;
 import java.util.*;
+import static java.lang.Math.pow;
 
 import static java.lang.Math.toIntExact;
 //import CommonConfigReader;
@@ -68,6 +69,8 @@ public class FileManager {
         }
 
         File outputFile = new File("out." + extension);
+        //File outputFile = new File(ccr.fileName);
+
         byte[] part = new byte[pieceSize];
         FileOutputStream out = new FileOutputStream((outputFile),true);
         int bufferSize;
@@ -79,8 +82,6 @@ public class FileManager {
             bufferSize = buffer.read(part);
             out.write(part, 0, bufferSize);
         }
-
-
     }
 
     public void sendPiece(Socket socket, String pathname) throws IOException {
@@ -107,6 +108,37 @@ public class FileManager {
         outputStream.flush();
 
     }
+	
+	public byte[] sendPiece(String pathname) throws IOException { //Functionality without sockets
+		File file = new File(pathname); //Get the correct file part
+        FileInputStream fis = new FileInputStream(file);
+        ByteArrayOutputStream byteOutput = new ByteArrayOutputStream();
+        byte[] buffer = new byte[pieceSize];
+
+        int bufferSize = 0;
+        //Write ByteArrayOutputStream
+        try{
+            while((bufferSize = fis.read(buffer)) > 0)
+            {
+                byteOutput.write(buffer, 0, bufferSize);
+            }
+        } catch(IOException e){
+            System.out.println(e.getStackTrace());
+        }
+
+        byte[] output = byteOutput.toByteArray();
+		return output;
+        
+	}
+	
+	public void receivePiece(byte[] input, String pathname) throws IOException { //Functionality without sockets
+		File file = new File(pathname);
+        FileOutputStream fos = new FileOutputStream(file);
+        fos.write(input);
+        fos.flush();
+        fos.close();
+		
+	}
 
     public void receivePiece(ServerSocket serverSocket, String pathname) throws IOException {
         Socket socket = serverSocket.accept();
@@ -129,20 +161,32 @@ public class FileManager {
             pieces.add(new File(ccr.fileName + i));
         }
     }
+	
+	public static double timer() {
+			double time = System.nanoTime();
+			time = time/(pow(10, 9));
+			return time;
+	}
 
     public static void main(String[] args) throws IOException {
-        /*File file2 = new File("..");
+        /*File file2 = new File(".");
         for(String fileNames : file2.list()) System.out.println(fileNames);
         */
         FileManager fm = new FileManager();
         File file = new File(ccr.fileName);
+        double start = fm.timer();
         split(file);
+        double stop = fm.timer();
 
+        System.out.println("Splitting took " + (stop-start) + " seconds.");
         //Use this to collect all the pieces
         pieceGatherer();
 
+        start = fm.timer();
         //Merge the pieces
         merge(pieces);
+        stop = fm.timer();
 
+        System.out.println("Merging took " + (stop-start) + " seconds.");
     }
 }
