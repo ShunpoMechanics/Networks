@@ -82,10 +82,21 @@ public class Message {
     }
 
     private boolean isValid(int msgLength, MessageType msgType, byte[] msgPayload) {
-        if (messagePayload == null) {
-            System.err.println("messagePayload is null");
-            return false;
+        if (msgType == MessageType.choke
+                || msgType == MessageType.unchoke
+                || msgType == MessageType.interested
+                || msgType == MessageType.notInterested) {
+            if (messagePayload != null) {
+                System.err.println("messagePayload is NOT NULL for a message that MUST NOT have payload");
+                return false;
+            }
+        } else {
+            if (messagePayload == null) {
+                System.err.println("messagePayload is NULL for a message that MUST have payload");
+                return false;
+            }
         }
+
         if (messageLength < 0) {
             System.err.println("messageLength is negative");
             return false;
