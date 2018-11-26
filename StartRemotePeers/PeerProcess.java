@@ -4,6 +4,7 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.nio.ByteBuffer;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -83,34 +84,81 @@ public class PeerProcess implements Runnable {
 
         // While peer is alive, exchange pieces.
         while (isAlive) {
-            for (Connection conn : conns) {
-                // If connection is still in handshake stage, check the input.
-                if (conn.status == Connection.Status.HANDSHAKE) {
-                    try {
-                        Object response = conn.in.readObject();
-                        if (response != null) {
-                            HandshakeMessage.verifyHandshakeMessage(response, conn);
-                            // If verification was successful, change status to ESTABLISHED and set the pid for the connection.
-                            conn.status = Connection.Status.ESTABLISHED;
-                            conn.pid = ((HandshakeMessage) response).pid;
-                            // Send the bitfield message of the current peer to other peer.
-                            Peer current = PeerInfoReader.PEERS.get(this.pid);
-                            conn.out.writeObject(new Message(current.bitfield.length, Message.MessageType.bitfield, current.bitfield));
-                            conn.out.flush();
+            try {
+                for (Connection conn : conns) {
+                    // If connection is still in handshake stage, check the input.
+                    if (conn.status == Connection.Status.HANDSHAKE) {
+                        if (conn.in.available() > 0) {
+                            Object response = conn.in.readObject();
+                            if (response != null) {
+                                HandshakeMessage.verifyHandshakeMessage(response, conn);
+                                // If verification was successful, change status to ESTABLISHED and set the pid for the connection.
+                                conn.status = Connection.Status.ESTABLISHED;
+                                conn.pid = ((HandshakeMessage) response).pid;
+                                // Send the bitfield message of the current peer to other peer.
+                                Peer current = PeerInfoReader.PEERS.get(this.pid);
+                                conn.out.writeObject(new Message(current.bitfield.length, Message.MessageType.bitfield, current.bitfield));
+                                conn.out.flush();
+                            }
                         }
-                    } catch (Exception e) {
-                        Logger.getLogger(PeerProcess.class.getName()).log(Level.SEVERE, null, e);
+                    } else { // Connection is established.
+                        Peer current = PeerInfoReader.PEERS.get(this.pid);
+                        Peer peer = PeerInfoReader.PEERS.get(conn.pid);
+                        // Exchange pieces with neighbor.
+                        // Check the input stream of connection to read the arrived messages.
+                        if (conn.in.available() > 0) {
+                            Message response = (Message) conn.in.readObject();
+                            switch (response.getMessageType()) {
+                                case choke: {
+                                    peer.peerChokedCurrentClient = true;
+                                    break;
+                                }
+                                case unchoke: {
+                                    peer.peerChokedCurrentClient = false;
+                                    // Send request to this peer.
+                                    // TODO.
+                                    break;
+                                }
+                                case interested: {
+                                    break;
+                                }
+                                case notInterested: {
+                                    break;
+                                }
+                                case have: {
+                                    // If have was received, update bitfield of peer.
+                                    byte[] bytes = response.getMessagePayload();
+                                    // Payload must be 4 bytes.
+                                    if (bytes.length != 4) {
+                                        System.err.println("Received 'have' message has payload of size " + bytes.length);
+                                    } else {
+                                        int pieceIndex = ByteBuffer.wrap(bytes).getInt();
+                                        peer.updateBitfield(pieceIndex);
+                                    }
+                                    break;
+                                }
+                                case bitfield: {
+                                    // If bitfield was received, set bitfield of peer.
+                                    peer.bitfield = response.getMessagePayload();
+                                    break;
+                                }
+                                case request: {
+                                    break;
+                                }
+                                case piece: {
+                                    // If a piece was received, update bitfield of current client.
+
+                                    break;
+                                }
+                            }
+                        }
+                        // TODO.
+                        // Write the appropriate output.
+                        // TODO.
                     }
-                } else { // Connection is established.
-                    Peer neighbor = PeerInfoReader.PEERS.get(conn.pid);
-                    // Exchange pieces with neighbor.
-                    // Check the input stream of connection to read the arrived messages.
-                    // TODO.
-                    // If a piece was received, update bitfield.
-                    // TODO.
-                    // Write the appropriate output.
-                    // TODO.
                 }
+            } catch (Exception e) {
+                Logger.getLogger(PeerProcess.class.getName()).log(Level.SEVERE, null, e);
             }
         }
     }
