@@ -1,3 +1,4 @@
+
 import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -6,24 +7,16 @@ import java.util.*;
 import static java.lang.Math.pow;
 
 import static java.lang.Math.toIntExact;
+import java.nio.ByteBuffer;
 //import CommonConfigReader;
 
 public class FileManager {
 
-    static CommonConfigReader ccr;
-    static int pieceSize;
-    static int numPieces;
+    static CommonConfigReader ccr = CommonConfigReader.getInstance();
+    static int pieceSize = ccr.pieceSize;
+    static int numPieces = ccr.numPieces;
     static String extension = "";
     private static List<File> pieces = new ArrayList<>();
-    {
-        try {
-            ccr = new CommonConfigReader("testCommon.cfg");
-            pieceSize = toIntExact(ccr.pieceSize);
-            numPieces = toIntExact(ccr.fileSize/pieceSize);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
 
     public static void split(File file) throws IOException {
         int count = 0;
@@ -37,8 +30,7 @@ public class FileManager {
 
         int bufferSize = 0;
 
-        while((bufferSize = buffer.read(part)) > 0)
-        {
+        while ((bufferSize = buffer.read(part)) > 0) {
             String filePart = filename + count; //Make part name
             File outputFile = new File(file.getParent(), filePart); //Create output file
 
@@ -53,18 +45,17 @@ public class FileManager {
         String temp = "";
         //This loop and the next are for testing
         //Get extension of the file
-        for(int i = ccr.fileName.length() - 1; i > 0; i--)
-        {
+        for (int i = ccr.fileName.length() - 1; i > 0; i--) {
             char index = ccr.fileName.charAt(i);
-            if(index == '.')
+            if (index == '.') {
                 break;
-            else
+            } else {
                 temp += index;
+            }
         }
 
         //Reverse extension
-        for(int i = temp.length() - 1; i > -1; i--)
-        {
+        for (int i = temp.length() - 1; i > -1; i--) {
             extension += temp.charAt(i);
         }
 
@@ -72,11 +63,10 @@ public class FileManager {
         //File outputFile = new File(ccr.fileName);
 
         byte[] part = new byte[pieceSize];
-        FileOutputStream out = new FileOutputStream((outputFile),true);
+        FileOutputStream out = new FileOutputStream((outputFile), true);
         int bufferSize;
 
-        for(int i = 0; i < numPieces + 1; i++)
-        {
+        for (int i = 0; i < numPieces + 1; i++) {
             FileInputStream input = new FileInputStream(parts.get(i));
             BufferedInputStream buffer = new BufferedInputStream(input);
             bufferSize = buffer.read(part);
@@ -95,12 +85,11 @@ public class FileManager {
 
         int bufferSize = 0;
         //Write ByteArrayOutputStream
-        try{
-            while((bufferSize = fis.read(buffer)) > 0)
-            {
+        try {
+            while ((bufferSize = fis.read(buffer)) > 0) {
                 byteOutput.write(buffer, 0, bufferSize);
             }
-        } catch(IOException e){
+        } catch (IOException e) {
             System.out.println(e.getStackTrace());
         }
 
@@ -108,37 +97,40 @@ public class FileManager {
         outputStream.flush();
 
     }
-	
-	public byte[] sendPiece(String pathname) throws IOException { //Functionality without sockets
-		File file = new File(pathname); //Get the correct file part
+
+    public byte[] sendPiece(String pathname, int pieceIndex) throws IOException { //Functionality without sockets
+        File file = new File(pathname); //Get the correct file part
         FileInputStream fis = new FileInputStream(file);
         ByteArrayOutputStream byteOutput = new ByteArrayOutputStream();
         byte[] buffer = new byte[pieceSize];
+        // First four bytes are the piece index, write them first.
+        byte[] pieceIndexBytes = ByteBuffer.allocate(4).putInt(pieceIndex).array();
+        byteOutput.write(pieceIndexBytes);
 
         int bufferSize = 0;
         //Write ByteArrayOutputStream
-        try{
-            while((bufferSize = fis.read(buffer)) > 0)
-            {
+        try {
+            while ((bufferSize = fis.read(buffer)) > 0) {
                 byteOutput.write(buffer, 0, bufferSize);
             }
-        } catch(IOException e){
+        } catch (IOException e) {
             System.out.println(e.getStackTrace());
         }
 
         byte[] output = byteOutput.toByteArray();
-		return output;
-        
-	}
-	
-	public void receivePiece(byte[] input, String pathname) throws IOException { //Functionality without sockets
-		File file = new File(pathname);
+        return output;
+
+    }
+
+    public void receivePiece(byte[] input, String pathname) throws IOException { //Functionality without sockets
+        File file = new File(pathname);
         FileOutputStream fos = new FileOutputStream(file);
-        fos.write(input);
+        // Start at byte 4, because bytes 0-3 are the piece index.
+        fos.write(input, 4, input.length - 4);
         fos.flush();
         fos.close();
-		
-	}
+
+    }
 
     public void receivePiece(ServerSocket serverSocket, String pathname) throws IOException {
         Socket socket = serverSocket.accept();
@@ -155,30 +147,30 @@ public class FileManager {
         fos.close();
     }
 
-    public static void pieceGatherer() {
-        for(int i = 0; i < numPieces + 1; i++)
-        {
+    public static List<File> pieceGatherer() {
+        for (int i = 0; i < numPieces + 1; i++) {
             pieces.add(new File(ccr.fileName + i));
         }
+        return pieces;
     }
-	
-	public static double timer() {
-			double time = System.nanoTime();
-			time = time/(pow(10, 9));
-			return time;
-	}
+
+    public static double timer() {
+        double time = System.nanoTime();
+        time = time / (pow(10, 9));
+        return time;
+    }
 
     public static void main(String[] args) throws IOException {
         /*File file2 = new File(".");
         for(String fileNames : file2.list()) System.out.println(fileNames);
-        */
+         */
         FileManager fm = new FileManager();
         File file = new File(ccr.fileName);
         double start = fm.timer();
         split(file);
         double stop = fm.timer();
 
-        System.out.println("Splitting took " + (stop-start) + " seconds.");
+        System.out.println("Splitting took " + (stop - start) + " seconds.");
         //Use this to collect all the pieces
         pieceGatherer();
 
@@ -187,6 +179,6 @@ public class FileManager {
         merge(pieces);
         stop = fm.timer();
 
-        System.out.println("Merging took " + (stop-start) + " seconds.");
+        System.out.println("Merging took " + (stop - start) + " seconds.");
     }
 }

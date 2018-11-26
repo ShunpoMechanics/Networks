@@ -1,14 +1,10 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
+
+import java.io.Serializable;
 
 /**
- *
  * @author Tima Tavassoli (ftavassoli@ufl.edu)
  */
-public class Message {
+public class Message implements Serializable {
 
     /**
      * Define MessageType enum.
@@ -39,7 +35,6 @@ public class Message {
     private final byte[] messagePayload;
 
     /**
-     *
      * @param msgLength
      * @param msgType
      * @param msgPayload
@@ -50,7 +45,6 @@ public class Message {
         messagePayload = msgPayload;
 
         if (!isValid(msgLength, msgType, msgPayload)) {
-            Flags.print("Message creation failed..." + toString(), Flags.Debug.ERROR);
             throw new Exception("Message creation failed");
         }
     }
@@ -82,15 +76,26 @@ public class Message {
     }
 
     private boolean isValid(int msgLength, MessageType msgType, byte[] msgPayload) {
-        if (messagePayload == null) {
-            System.err.println("messagePayload is null");
-            return false;
+        if (msgType == MessageType.choke
+                || msgType == MessageType.unchoke
+                || msgType == MessageType.interested
+                || msgType == MessageType.notInterested) {
+            if (messagePayload != null) {
+                System.err.println("messagePayload is NOT NULL for a message that MUST NOT have payload");
+                return false;
+            }
+        } else {
+            if (messagePayload == null) {
+                System.err.println("messagePayload is NULL for a message that MUST have payload");
+                return false;
+            }
         }
+
         if (messageLength < 0) {
             System.err.println("messageLength is negative");
             return false;
         }
-        if (messageLength != msgPayload.length) {
+        if (msgPayload != null && messageLength != msgPayload.length) {
             System.err.println("messageLength is not equal to length of payload byte array");
             return false;
         }

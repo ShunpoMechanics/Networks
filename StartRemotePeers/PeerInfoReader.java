@@ -2,39 +2,41 @@
 import java.io.*;
 import java.util.*;
 
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
 /**
  *
  * @author Tima Tavassoli (ftavassoli@ufl.edu)
  */
 public class PeerInfoReader {
 
-    public static void main(String args[]) throws IOException {
-        PeerInfoReader ss = new PeerInfoReader("Common.cfg");
-    }
-    
-    HashMap<Integer, Neighbor> neighbors;
+    /**
+     * List of all PEERS from the configuration file.
+     */
+    public static final HashMap<Integer, Peer> PEERS = new HashMap<>();
 
     public PeerInfoReader(String peerInfoFilePath) throws FileNotFoundException, IOException {
         BufferedReader br = new BufferedReader(new FileReader(peerInfoFilePath));
 
-        String line = "";
+        String line;
         while ((line = br.readLine()) != null) {
             String[] tokens = line.split(" ");
-            Neighbor n = new Neighbor();
-            n.id = Integer.parseInt(tokens[0]);
+            Peer n = new Peer();
+            n.pid = Integer.parseInt(tokens[0]);
             n.hostname = tokens[1];
             n.listeningPort = Integer.parseInt(tokens[2]);
             n.hasFile = Integer.parseInt(tokens[3]);
-            neighbors.put(n.id, n);
+            // Create bitfield which defaults to all 0s.
+            byte[] bitfield = new byte[(int) Math.ceil(CommonConfigReader.getInstance().numPieces / 8.0)];
+            // If a peer hasFile, the bits need to be set to 1, except the spare bits. 
+            if (n.hasFile == 1) {
+                Arrays.fill(bitfield, (byte) 0xFF);
+            }
+            // Left shift by number of spare bits, so as to set them to 0.
+            bitfield[bitfield.length - 1] <<= bitfield.length * 8 - CommonConfigReader.getInstance().numPieces;
+            n.bitfield = BitSet.valueOf(bitfield);
+            PEERS.put(n.pid, n);
         }
 
-        Flags.print("Finished reading " + peerInfoFilePath, Flags.Debug.INFO);
-        Flags.print(this.toString(), Flags.Debug.INFO);
+        System.out.println("Finished reading " + peerInfoFilePath);
     }
 
 }
