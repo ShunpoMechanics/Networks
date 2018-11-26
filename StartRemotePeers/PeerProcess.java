@@ -129,9 +129,11 @@ public class PeerProcess implements Runnable {
     class ConnectionHandler implements Runnable {
 
         Connection conn;
+        FileManager fileManager;
 
         public ConnectionHandler(Connection conn) {
             this.conn = conn;
+            fileManager = new FileManager();
         }
 
         @Override
@@ -140,8 +142,7 @@ public class PeerProcess implements Runnable {
             try {
                 // Send a HandshakeMessage with pid set to the current peer's pid.
                 System.out.println("pid " + local_pid + ": sending handshake to " + conn.socket.getInetAddress() + ":" + conn.socket.getPort());
-                conn.out.writeObject(new HandshakeMessage(local_pid));
-                conn.out.flush();
+                conn.writeAndFlush(new HandshakeMessage(local_pid));
             } catch (IOException ex) {
                 System.err.println("ObjectOutputStream to " + conn.socket.getInetAddress() + ":" + conn.socket.getPort() + " failed");
                 Logger.getLogger(PeerProcess.class.getName()).log(Level.SEVERE, null, ex);
@@ -161,8 +162,7 @@ public class PeerProcess implements Runnable {
                             // Send the bitfield message of the current peer to other peer.
                             Peer current = PeerInfoReader.PEERS.get(conn.local_pid);
                             byte[] bitfield = current.bitfield.toByteArray();
-                            conn.out.writeObject(new Message(bitfield.length, Message.MessageType.bitfield, bitfield));
-                            conn.out.flush();
+                            conn.writeAndFlush(new Message(bitfield.length, Message.MessageType.bitfield, bitfield));
                         } else {
                             System.err.println("Null response");
                         }
@@ -184,8 +184,7 @@ public class PeerProcess implements Runnable {
                                 if (peer.currentClientInterestedInPeer
                                         && current.bitfield.cardinality() < commonConfig.numPieces) {
                                     Message req = PeerUtils.generateRequestMessageFrom(conn.local_pid);
-                                    conn.out.writeObject(req);
-                                    conn.out.flush();
+                                    conn.writeAndFlush(req);
                                 }
                                 break;
                             }
@@ -212,8 +211,7 @@ public class PeerProcess implements Runnable {
                                 // Determine whether current client should send an ‘interested’ message.
                                 if (!current.bitfield.get(pieceIndex)) { // If current client doesn't have this piece.
                                     Message interested = PeerUtils.generateInterestMessageTo(peer);
-                                    conn.out.writeObject(interested);
-                                    conn.out.flush();
+                                    conn.writeAndFlush(interested);
                                 } else {
                                     // If current client already has the piece, and 
                                     // the neighbor doesn't have any interesting pieces (i.e. the neighbor's bitfield is a subset of our bitfield), 
@@ -223,8 +221,7 @@ public class PeerProcess implements Runnable {
                                     // If the result of `and`, is the same as the other peer's bitfield, then other bitfield is a subset of current client's bitfield.
                                     if (tmp.equals(peer.bitfield)) {
                                         Message not_interested = PeerUtils.generateNotInterestMessageTo(peer);
-                                        conn.out.writeObject(not_interested);
-                                        conn.out.flush();
+                                        conn.writeAndFlush(not_interested);
                                     }
                                 }
                                 break;
@@ -238,17 +235,21 @@ public class PeerProcess implements Runnable {
                                 // If the result of `and`, is the same as the other peer's bitfield, then other bitfield is a subset of current client's bitfield.
                                 if (tmp.equals(peer.bitfield)) {
                                     Message not_interested = PeerUtils.generateNotInterestMessageTo(peer);
-                                    conn.out.writeObject(not_interested);
-                                    conn.out.flush();
+                                    conn.writeAndFlush(not_interested);
                                 } else { // Else, peer has something that current client doesn't, send `interested`.
                                     Message interested = PeerUtils.generateInterestMessageTo(peer);
-                                    conn.out.writeObject(interested);
-                                    conn.out.flush();
+                                    conn.writeAndFlush(interested);
                                 }
                                 // TODO: Anything else here?
                                 break;
                             }
                             case request: {
+                                // Send the piece that was requested.
+                                int pieceIndex = ByteBuffer.wrap(response.getMessagePayload()).getInt();
+                                byte[] payload = fileManager.sendPiece(commonConfig.fileName + "" + pieceIndex);
+                                Message piece = new Message(payload.length, Message.MessageType.piece, payload);
+                                conn.writeAndFlush(piece);
+                                // TODO Anything else here?
                                 break;
                             }
                             case piece: {

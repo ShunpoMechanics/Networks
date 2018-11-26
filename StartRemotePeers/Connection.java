@@ -1,4 +1,5 @@
 
+import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
@@ -29,6 +30,11 @@ public class Connection {
         this.local_pid = local_pid;
         status = Status.HANDSHAKE;
         remote_pid = -1;
+    }
+    
+    public void writeAndFlush(Object obj) throws IOException {
+        this.out.writeObject(obj);
+        this.out.flush();
     }
 
 }
