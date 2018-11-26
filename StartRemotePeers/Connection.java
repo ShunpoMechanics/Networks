@@ -13,20 +13,22 @@ public class Connection {
     ObjectOutputStream out;
     ObjectInputStream in;
     Status status;
-    // The pid of the other side of this connection, defaults to -1 until handshake message is received.
-    int pid;
+    int local_pid;
+    // The remote_pid of the other side of this connection, defaults to -1 until handshake message is received.
+    int remote_pid;
 
     public enum Status {
         HANDSHAKE,
         ESTABLISHED
     }
 
-    public Connection(Socket socket, ObjectOutputStream out, ObjectInputStream in) {
+    public Connection(Socket socket, ObjectOutputStream out, ObjectInputStream in, int local_pid) {
         this.socket = socket;
         this.out = out;
         this.in = in;
+        this.local_pid = local_pid;
         status = Status.HANDSHAKE;
-        pid = -1;
+        remote_pid = -1;
     }
 
 }

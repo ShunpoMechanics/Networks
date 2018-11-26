@@ -36,8 +36,7 @@ public class PeerInfoReader {
             PEERS.put(n.pid, n);
         }
 
-        Flags.print("Finished reading " + peerInfoFilePath, Flags.Debug.INFO);
-        Flags.print(this.toString(), Flags.Debug.INFO);
+        System.out.println("Finished reading " + peerInfoFilePath);
     }
 
 }

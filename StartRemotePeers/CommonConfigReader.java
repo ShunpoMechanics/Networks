@@ -62,8 +62,7 @@ public class CommonConfigReader {
         // Calculate the number of pieces.
         numPieces = (int) Math.ceil((double) fileSize / pieceSize);
 
-        Flags.print("Finished reading " + CONFIG_FILE_PATH, Flags.Debug.INFO);
-        Flags.print(this.toString(), Flags.Debug.INFO);
+        System.out.println("Finished reading " + CONFIG_FILE_PATH);
     }
 
     @Override

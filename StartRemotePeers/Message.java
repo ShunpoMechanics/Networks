@@ -1,9 +1,11 @@
 
+import java.io.Serializable;
+
 /**
  *
  * @author Tima Tavassoli (ftavassoli@ufl.edu)
  */
-public class Message {
+public class Message implements Serializable {
 
     /**
      * Define MessageType enum.
@@ -45,7 +47,6 @@ public class Message {
         messagePayload = msgPayload;
 
         if (!isValid(msgLength, msgType, msgPayload)) {
-            Flags.print("Message creation failed..." + toString(), Flags.Debug.ERROR);
             throw new Exception("Message creation failed");
         }
     }

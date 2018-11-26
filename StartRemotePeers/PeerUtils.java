@@ -1,5 +1,12 @@
 
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.net.Socket;
 import java.util.*;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import java.util.stream.Stream;
 
 /**
@@ -7,6 +14,34 @@ import java.util.stream.Stream;
  * @author Tima Tavassoli (ftavassoli@ufl.edu)
  */
 public class PeerUtils {
+
+    /**
+     * Connect to others PEERS with pid lower that current client's pid.
+     */
+    public static CopyOnWriteArrayList<Connection> connectToOthers(int local_pid) {
+        // A thread-safe variant of ArrayList, which is very efficient if the number of mutations is low like this program.
+        CopyOnWriteArrayList<Connection> conns = new CopyOnWriteArrayList<>();
+        // Connect to other PEERS with pid lower than this peer's pid.
+        for (Integer id : PeerInfoReader.PEERS.keySet()) {
+            if (id < local_pid) {
+                Peer neighbor = PeerInfoReader.PEERS.get(id);
+                try {
+                    Socket s = new Socket(neighbor.hostname, neighbor.listeningPort);
+                    Connection conn = new Connection(s,
+                            new ObjectOutputStream(s.getOutputStream()),
+                            new ObjectInputStream(s.getInputStream()),
+                            local_pid);
+                    // Keep track of connected PEERS.
+                    conns.add(conn);
+                    System.out.println("local_pid " + local_pid + " opened connection to " + neighbor.hostname + ":" + neighbor.listeningPort);
+                } catch (IOException ex) {
+                    System.out.println("Socket creation to " + neighbor.hostname + ":" + neighbor.listeningPort + " failed");
+                    Logger.getLogger(PeerProcess.class.getName()).log(Level.SEVERE, null, ex);
+                }
+            }
+        }
+        return conns;
+    }
 
     /**
      *
