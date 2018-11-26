@@ -3,6 +3,7 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
+import java.nio.ByteBuffer;
 import java.util.*;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.logging.Level;
@@ -10,10 +11,37 @@ import java.util.logging.Logger;
 import java.util.stream.Stream;
 
 /**
- *
  * @author Tima Tavassoli (ftavassoli@ufl.edu)
  */
 public class PeerUtils {
+
+    public static Message generateInterestMessageTo(Peer remote) throws Exception {
+        // Update the `interest` booleans.
+        remote.currentClientInterestedInPeer = true;
+        return new Message(0, Message.MessageType.interested, null);
+    }
+
+    public static Message generateRequestMessageFrom(int local_pid) throws Exception {
+        Peer p = PeerInfoReader.PEERS.get(local_pid);
+        CommonConfigReader ccr = CommonConfigReader.getInstance();
+        Random rand = new Random();
+        int selectedIndex = rand.nextInt(ccr.numPieces);
+        // If the selectedIndex is already set to 1, client has the piece, so try again.
+        // Since the index is random, if the piece has not been received yet,
+        // it is possible but unlikely to send the same request to multiple peers.
+        int lastRandom;
+        while (p.bitfield.get(selectedIndex)) {
+            lastRandom = selectedIndex;
+            // Just get the next clear bit, this way the random loop won't be repeated too many times.
+            selectedIndex = p.bitfield.nextClearBit(selectedIndex);
+            // If nextClearBit was not found or was one of the spare bits, try a new random index smaller than the last random.
+            if (selectedIndex == p.bitfield.length() || selectedIndex >= ccr.numPieces) {
+                selectedIndex = rand.nextInt(lastRandom);
+            }
+        }
+        byte[] payload = ByteBuffer.allocate(4).putInt(selectedIndex).array();
+        return new Message(payload.length, Message.MessageType.request, payload);
+    }
 
     /**
      * Connect to others PEERS with pid lower that current client's pid.
@@ -44,8 +72,8 @@ public class PeerUtils {
     }
 
     /**
-     *
      * @param k
+     *
      * @return
      */
     public static TwoLists choosePreferredNeighbors(int k) {

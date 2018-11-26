@@ -32,7 +32,7 @@ public class PeerInfoReader {
             }
             // Left shift by number of spare bits, so as to set them to 0.
             bitfield[bitfield.length - 1] <<= bitfield.length * 8 - CommonConfigReader.getInstance().numPieces;
-            n.bitfield = bitfield;
+            n.bitfield = BitSet.valueOf(bitfield);
             PEERS.put(n.pid, n);
         }
 

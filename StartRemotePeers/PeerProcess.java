@@ -5,12 +5,12 @@ import java.io.ObjectOutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.nio.ByteBuffer;
+import java.util.BitSet;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- *
  * @author Tima Tavassoli (ftavassoli@ufl.edu)
  */
 public class PeerProcess implements Runnable {
@@ -22,6 +22,7 @@ public class PeerProcess implements Runnable {
      * PeerProcess is the entry point of this program.
      *
      * @param args
+     *
      * @throws IOException
      */
     public static void main(String args[]) throws IOException {
@@ -156,10 +157,11 @@ public class PeerProcess implements Runnable {
                             // If verification was successful, change status to ESTABLISHED and set the remote_pid for the connection.
                             conn.status = Connection.Status.ESTABLISHED;
                             conn.remote_pid = ((HandshakeMessage) response).pid;
-                            System.out.println("pid " + conn.local_pid +  ": HandshakeMessage successfully received from " + conn.remote_pid);
+                            System.out.println("pid " + conn.local_pid + ": HandshakeMessage successfully received from " + conn.remote_pid);
                             // Send the bitfield message of the current peer to other peer.
                             Peer current = PeerInfoReader.PEERS.get(conn.local_pid);
-                            conn.out.writeObject(new Message(current.bitfield.length, Message.MessageType.bitfield, current.bitfield));
+                            byte[] bitfield = current.bitfield.toByteArray();
+                            conn.out.writeObject(new Message(bitfield.length, Message.MessageType.bitfield, bitfield));
                             conn.out.flush();
                         } else {
                             System.err.println("Null response");
@@ -177,31 +179,48 @@ public class PeerProcess implements Runnable {
                             }
                             case unchoke: {
                                 peer.peerChokedCurrentClient = false;
-                                // Send request to this peer.
-                                // TODO.
+                                // Send request to this peer if current client is interested in the peer
+                                // and the peer doesn't have all the pieces.
+                                if (peer.currentClientInterestedInPeer
+                                        && current.bitfield.cardinality() < commonConfig.numPieces) {
+                                    Message req = PeerUtils.generateRequestMessageFrom(conn.local_pid);
+                                    conn.out.writeObject(req);
+                                    conn.out.flush();
+                                }
                                 break;
                             }
                             case interested: {
+                                peer.peerInterestedInCurrentClient = true;
+                                // TODO: Anything else here?
                                 break;
                             }
                             case notInterested: {
+                                // TODO.
                                 break;
                             }
                             case have: {
-                                // If have was received, update bitfield of peer.
+                                // If have was received, update bitfield of remote peer.
                                 byte[] bytes = response.getMessagePayload();
                                 // Payload must be 4 bytes.
                                 if (bytes.length != 4) {
                                     System.err.println("Received 'have' message has payload of size " + bytes.length);
-                                } else {
-                                    int pieceIndex = ByteBuffer.wrap(bytes).getInt();
-                                    peer.updateBitfield(pieceIndex);
+                                    break;
+                                }
+                                int pieceIndex = ByteBuffer.wrap(bytes).getInt();
+                                peer.bitfield.set(pieceIndex);
+                                // Determine whether current client should send an ‘interested’ message.
+                                if (!current.bitfield.get(pieceIndex)) { // If current client doesn't have this piece.
+                                    Message interested = PeerUtils.generateInterestMessageTo(peer);
+                                    conn.out.writeObject(interested);
+                                    conn.out.flush();
                                 }
                                 break;
                             }
                             case bitfield: {
-                                // If bitfield was received, set bitfield of peer.
-                                peer.bitfield = response.getMessagePayload();
+                                // If bitfield was received, set bitfield of remote peer.
+                                peer.bitfield = BitSet.valueOf(response.getMessagePayload());
+                                // Determine whether current client should send an ‘interested’ message.
+                                // TODO;
                                 break;
                             }
                             case request: {

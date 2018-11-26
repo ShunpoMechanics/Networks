@@ -1,6 +1,8 @@
 
+import java.util.BitSet;
+import java.util.HashSet;
+
 /**
- *
  * @author Tima Tavassoli (ftavassoli@ufl.edu)
  */
 public class Peer {
@@ -11,27 +13,30 @@ public class Peer {
     int hasFile;
     boolean isPreferred;
     // Source https://wiki.theory.org/index.php/BitTorrentSpecification#Peer_wire_protocol_.28TCP.29 for the following:
-    boolean peerChokedCurrentClient; // Peer is choking the current client.
-    boolean currentClientChokedPeer; // The current client is choking the peer.
-    boolean peerInterestedInCurrentClient; // Peer is interested in the current client.
-    boolean currentClientInterestedInPeer; // The current client is interested in the peer.
+    // ``Client connections start out as "choked" and "not interested".``
+    boolean peerChokedCurrentClient = true; // Peer is choking the current client.
+    boolean currentClientChokedPeer = true; // The current client is choking the peer.
+    boolean peerInterestedInCurrentClient = false; // Peer is interested in the current client.
+    boolean currentClientInterestedInPeer = false; // The current client is interested in the peer.
 
     int downloadRate;
     // If the peer has the entire file, this would be initialized to 1s (except spare bits), otherwise this starts at all 0s.
     // As the peer receives pieces, this is updated accordingly.
-    byte[] bitfield;
+    BitSet bitfield;
+    // To keep track of indices that have been requested, but not received (and thus might not be 1 on the bitfield yet).
+    // This is no longer needed, as we randomly select pieces (and could possibly repeat the request if not received).
+//    HashSet<Integer> requestedIndices;
 
     /**
      * Set the bit at pieceIndex to 1.
      *
      * @param pieceIndex
      */
-    public void updateBitfield(int pieceIndex) {
-        // (pieceIndex / 8) is the index of the byte, (pieceIndex % 8) is the index within the byte which is set to one through 
-        // a logical "OR". 
-        bitfield[(pieceIndex / 8)] |= (0x80 /* 1000 0000 */ >> (pieceIndex % 8));
-    }
-
+//    public void updateBitfield(int pieceIndex) {
+//        // (pieceIndex / 8) is the index of the byte, (pieceIndex % 8) is the index within the byte which is set to one through
+//        // a logical "OR".
+//        bitfield[(pieceIndex / 8)] |= (0x80 /* 1000 0000 */ >> (pieceIndex % 8));
+//    }
     public void prefer() {
         this.isPreferred = true;
     }
@@ -44,7 +49,6 @@ public class Peer {
         return isPreferred;
     }
 
-    
 //    public int getStatus() {
 //        int choke = 0;
 //        int interrested = 0;
@@ -68,7 +72,6 @@ public class Peer {
 //        //If choked, interrested and preferreded it returns 111
 //        //Define behavior with a switch using the various combincations instead of if(true && true || false) etc
 //    }
-
     /**
      * @return the pid
      */

@@ -2,7 +2,6 @@
 import java.io.Serializable;
 
 /**
- *
  * @author Tima Tavassoli (ftavassoli@ufl.edu)
  */
 public class Message implements Serializable {
@@ -36,7 +35,6 @@ public class Message implements Serializable {
     private final byte[] messagePayload;
 
     /**
-     *
      * @param msgLength
      * @param msgType
      * @param msgPayload
@@ -97,7 +95,7 @@ public class Message implements Serializable {
             System.err.println("messageLength is negative");
             return false;
         }
-        if (messageLength != msgPayload.length) {
+        if (msgPayload != null && messageLength != msgPayload.length) {
             System.err.println("messageLength is not equal to length of payload byte array");
             return false;
         }
