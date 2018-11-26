@@ -31,10 +31,12 @@ public class Connection {
         status = Status.HANDSHAKE;
         remote_pid = -1;
     }
-    
+
     public void writeAndFlush(Object obj) throws IOException {
-        this.out.writeObject(obj);
-        this.out.flush();
+        if (obj != null) {
+            this.out.writeObject(obj);
+            this.out.flush();
+        }
     }
 
 }

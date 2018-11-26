@@ -7,6 +7,7 @@ import java.util.*;
 import static java.lang.Math.pow;
 
 import static java.lang.Math.toIntExact;
+import java.nio.ByteBuffer;
 //import CommonConfigReader;
 
 public class FileManager {
@@ -97,11 +98,14 @@ public class FileManager {
 
     }
 
-    public byte[] sendPiece(String pathname) throws IOException { //Functionality without sockets
+    public byte[] sendPiece(String pathname, int pieceIndex) throws IOException { //Functionality without sockets
         File file = new File(pathname); //Get the correct file part
         FileInputStream fis = new FileInputStream(file);
         ByteArrayOutputStream byteOutput = new ByteArrayOutputStream();
         byte[] buffer = new byte[pieceSize];
+        // First four bytes are the piece index, write them first.
+        byte[] pieceIndexBytes = ByteBuffer.allocate(4).putInt(pieceIndex).array();
+        byteOutput.write(pieceIndexBytes);
 
         int bufferSize = 0;
         //Write ByteArrayOutputStream
@@ -121,7 +125,8 @@ public class FileManager {
     public void receivePiece(byte[] input, String pathname) throws IOException { //Functionality without sockets
         File file = new File(pathname);
         FileOutputStream fos = new FileOutputStream(file);
-        fos.write(input);
+        // Start at byte 4, because bytes 0-3 are the piece index.
+        fos.write(input, 4, input.length - 4);
         fos.flush();
         fos.close();
 
@@ -142,10 +147,11 @@ public class FileManager {
         fos.close();
     }
 
-    public static void pieceGatherer() {
+    public static List<File> pieceGatherer() {
         for (int i = 0; i < numPieces + 1; i++) {
             pieces.add(new File(ccr.fileName + i));
         }
+        return pieces;
     }
 
     public static double timer() {

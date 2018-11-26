@@ -27,22 +27,31 @@ public class PeerUtils {
         return new Message(0, Message.MessageType.interested, null);
     }
 
-    public static Message generateRequestMessageFrom(int local_pid) throws Exception {
-        Peer p = PeerInfoReader.PEERS.get(local_pid);
+    public static Message generateRequestMessage(Peer local_peer, Peer remote_peer) throws Exception {
         CommonConfigReader ccr = CommonConfigReader.getInstance();
+        // Only generate a request for pieces that the remote peer has, but the local peer doesn't i.e. (A' & B).
+        BitSet bitfield = (BitSet) local_peer.bitfield.clone(); // Grab a copy.
+        bitfield.flip(0, ccr.numPieces); // flip all bits, A'.
+        bitfield.and(remote_peer.bitfield); // & B.
+
         Random rand = new Random();
         int selectedIndex = rand.nextInt(ccr.numPieces);
-        // If the selectedIndex is already set to 1, client has the piece, so try again.
+        // If the selectedIndex is 0, either the client already has the piece of the remote peer doesn't have the piece, so try again.
         // Since the index is random, if the piece has not been received yet,
         // it is possible but unlikely to send the same request to multiple peers.
         int lastRandom;
-        while (p.bitfield.get(selectedIndex)) {
+        while (!bitfield.get(selectedIndex)) {
             lastRandom = selectedIndex;
             // Just get the next clear bit, this way the random loop won't be repeated too many times.
-            selectedIndex = p.bitfield.nextClearBit(selectedIndex);
+            selectedIndex = bitfield.nextSetBit(selectedIndex);
             // If nextClearBit was not found or was one of the spare bits, try a new random index smaller than the last random.
-            if (selectedIndex == p.bitfield.length() || selectedIndex >= ccr.numPieces) {
+            if (selectedIndex == bitfield.length() || selectedIndex >= ccr.numPieces) {
                 selectedIndex = rand.nextInt(lastRandom);
+            }
+            if (lastRandom < 1) {
+                System.err.println("pid " + local_peer.pid + " is trying to send a request to remote pid " + remote_peer.pid
+                        + " but cannot find a piece that it locally has but the remote doesn't have.");
+                return null;
             }
         }
         byte[] payload = ByteBuffer.allocate(4).putInt(selectedIndex).array();

@@ -130,6 +130,8 @@ public class PeerProcess implements Runnable {
 
         Connection conn;
         FileManager fileManager;
+        // Number of `seeds`. A seed is a peer that has all the pieces.
+        int seedCount = 0;
 
         public ConnectionHandler(Connection conn) {
             this.conn = conn;
@@ -150,6 +152,10 @@ public class PeerProcess implements Runnable {
             // While peer is alive, exchange pieces.
             while (isAlive) {
                 try {
+                    // If everyone is a seed (has all the pieces), iniate exit procedure.
+                    if (seedCount == PeerInfoReader.PEERS.size()) {
+                        cleanupAndExit();
+                    }
                     // If connection is still in handshake stage, check the input.
                     if (conn.status == Connection.Status.HANDSHAKE) {
                         Object response = conn.in.readObject();
@@ -183,7 +189,7 @@ public class PeerProcess implements Runnable {
                                 // and the peer doesn't have all the pieces.
                                 if (peer.currentClientInterestedInPeer
                                         && current.bitfield.cardinality() < commonConfig.numPieces) {
-                                    Message req = PeerUtils.generateRequestMessageFrom(conn.local_pid);
+                                    Message req = PeerUtils.generateRequestMessage(current, peer);
                                     conn.writeAndFlush(req);
                                 }
                                 break;
@@ -229,6 +235,10 @@ public class PeerProcess implements Runnable {
                             case bitfield: {
                                 // If bitfield was received, set bitfield of remote peer.
                                 peer.bitfield = BitSet.valueOf(response.getMessagePayload());
+                                // If the received bitfield is full (i.e. has all the pieces), update the number of `seeds`.
+                                if (peer.bitfield.cardinality() == commonConfig.numPieces) {
+                                    seedCount++;
+                                }
                                 // Determine whether current client should send an ‘interested’ message.
                                 BitSet tmp = (BitSet) current.bitfield.clone();
                                 tmp.and(peer.bitfield);
@@ -246,7 +256,9 @@ public class PeerProcess implements Runnable {
                             case request: {
                                 // Send the piece that was requested.
                                 int pieceIndex = ByteBuffer.wrap(response.getMessagePayload()).getInt();
-                                byte[] payload = fileManager.sendPiece(commonConfig.fileName + "" + pieceIndex);
+                                // Get the payload from fileManager.
+                                // TODO: test this.
+                                byte[] payload = fileManager.sendPiece(commonConfig.fileName + "" + pieceIndex, pieceIndex);
                                 Message piece = new Message(payload.length, Message.MessageType.piece, payload);
                                 conn.writeAndFlush(piece);
                                 // TODO Anything else here?
@@ -254,18 +266,45 @@ public class PeerProcess implements Runnable {
                             }
                             case piece: {
                                 // If a piece was received, update bitfield of current client.
-
+                                byte[] payload = response.getMessagePayload();
+                                int pieceIndex = ByteBuffer.wrap(payload, 0, 4).getInt();
+                                current.bitfield.set(pieceIndex);
+                                // Write the payload using fileManager.
+                                fileManager.receivePiece(payload, commonConfig.fileName + "" + pieceIndex);
+                                // Determine whether current client should is still interested and should send another request message.
+                                BitSet tmp = (BitSet) current.bitfield.clone();
+                                tmp.and(peer.bitfield);
+                                if (tmp.equals(peer.bitfield)) { // Current client has everything the other peer has, send not interested.
+                                    Message not_interested = PeerUtils.generateNotInterestMessageTo(peer);
+                                    conn.writeAndFlush(not_interested);
+                                } else if (current.bitfield.cardinality() < commonConfig.numPieces) {
+                                    // Otherwise, if current client doesn't have all the pieces, send another request for 
+                                    // a piece that current client doesn't have but the remote peer has.
+                                    Message req = PeerUtils.generateRequestMessage(current, peer);
+                                    conn.writeAndFlush(req);
+                                } else {
+                                    // This client has all the pieces, send the current client's bitfield to remote peer to inform 
+                                    // remote peer that the current client is finished. 
+                                    // Once everyone receives full bitfields, the program should exit.
+                                    seedCount++;
+                                    current.hasFile = 1; // Not used.
+                                    byte[] bitfield = current.bitfield.toByteArray();
+                                    conn.writeAndFlush(new Message(bitfield.length, Message.MessageType.bitfield, bitfield));
+                                }
+                                // TODO: Anthing else here?
                                 break;
                             }
                         }
-                        // TODO.
-                        // Write the appropriate output.
-                        // TODO.
                     }
                 } catch (Exception e) {
                     Logger.getLogger(PeerProcess.class.getName()).log(Level.SEVERE, null, e);
                 }
             }
+        }
+
+        private void cleanupAndExit() throws IOException {
+            FileManager.merge(FileManager.pieceGatherer());
+            isAlive = false;
         }
 
     }
