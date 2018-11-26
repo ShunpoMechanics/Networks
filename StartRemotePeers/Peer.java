@@ -1,3 +1,4 @@
+
 /**
  *
  * @author Tima Tavassoli (ftavassoli@ufl.edu)
@@ -13,6 +14,20 @@ public class Peer {
     boolean isInterrested;
 
     int downloadRate;
+    // If the peer has the entire file, this would be initialized to 1s (except spare bits), otherwise this starts at all 0s.
+    // As the peer receives pieces, this is updated accordingly.
+    byte[] bitfield;
+
+    /**
+     * Set the bit at pieceIndex to 1.
+     *
+     * @param pieceIndex
+     */
+    public void updateBitfield(int pieceIndex) {
+        // (pieceIndex / 8) is the index of the byte, (pieceIndex % 8) is the index within the byte which is set to one through 
+        // a logical "OR". 
+        bitfield[(pieceIndex / 8)] |= (0x80 /* 1000 0000 */ >> (pieceIndex % 8));
+    }
 
     public void choke() {
         this.isChoked = true;

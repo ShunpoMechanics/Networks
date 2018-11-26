@@ -4,6 +4,8 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.Scanner;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  *
@@ -11,28 +13,37 @@ import java.util.Scanner;
  */
 public class CommonConfigReader {
 
-    //    A simple main to test this class.
-    /*public static void main(String args[]) throws IOException {
-        CommonConfigReader ss = new CommonConfigReader("../testCommon.cfg");
-        Flags.print("Test main of CommonConfigReader finished", Flags.Debug.INFO);
+    // Path to Common.cfg file.
+    static final String CONFIG_FILE_PATH = "Common.cfg";
+    private static CommonConfigReader instance;
+
+    public static CommonConfigReader getInstance() {
+        if (instance == null) {
+            try {
+                instance = new CommonConfigReader();
+            } catch (IOException ex) {
+                Logger.getLogger(CommonConfigReader.class.getName()).log(Level.SEVERE, null, ex);
+            }
+        }
+        return instance;
     }
-     */
+
     final int numberOfPreferredNeighbors;
     final int unchokingInterval;
     final int optimisticUnchokingInterval;
     final String fileName;
     final long fileSize;
-    final long pieceSize;
+    final int pieceSize;
+    final int numPieces;
 
     /**
      * Reads the Common.cfg file.
      *
-     * @param configFilePath
      * @throws FileNotFoundException
      * @throws IOException
      */
-    public CommonConfigReader(String configFilePath) throws FileNotFoundException, IOException {
-        BufferedReader br = new BufferedReader(new FileReader(configFilePath));
+    private CommonConfigReader() throws FileNotFoundException, IOException {
+        BufferedReader br = new BufferedReader(new FileReader(CONFIG_FILE_PATH));
         Scanner sc = new Scanner(br);
         // For each of the 6 parameters, ignore the name of the parameter, then read the parameter.
         sc.next();
@@ -46,9 +57,12 @@ public class CommonConfigReader {
         sc.next();
         fileSize = sc.nextLong();
         sc.next();
-        pieceSize = sc.nextLong();
+        pieceSize = sc.nextInt();
 
-        Flags.print("Finished reading " + configFilePath, Flags.Debug.INFO);
+        // Calculate the number of pieces.
+        numPieces = (int) Math.ceil((double) fileSize / pieceSize);
+
+        Flags.print("Finished reading " + CONFIG_FILE_PATH, Flags.Debug.INFO);
         Flags.print(this.toString(), Flags.Debug.INFO);
     }
 

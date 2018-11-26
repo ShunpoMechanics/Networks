@@ -24,6 +24,15 @@ public class PeerInfoReader {
             n.hostname = tokens[1];
             n.listeningPort = Integer.parseInt(tokens[2]);
             n.hasFile = Integer.parseInt(tokens[3]);
+            // Create bitfield which defaults to all 0s.
+            byte[] bitfield = new byte[(int) Math.ceil(CommonConfigReader.getInstance().numPieces / 8.0)];
+            // If a peer hasFile, the bits need to be set to 1, except the spare bits. 
+            if (n.hasFile == 1) {
+                Arrays.fill(bitfield, (byte) 0xFF);
+            }
+            // Left shift by number of spare bits, so as to set them to 0.
+            bitfield[bitfield.length - 1] <<= bitfield.length * 8 - CommonConfigReader.getInstance().numPieces;
+            n.bitfield = bitfield;
             PEERS.put(n.pid, n);
         }
 

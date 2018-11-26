@@ -4,7 +4,6 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.util.HashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -14,6 +13,9 @@ import java.util.logging.Logger;
  * @author Tima Tavassoli (ftavassoli@ufl.edu)
  */
 public class PeerProcess implements Runnable {
+
+    // Get a reference to Common.cfg's Singleton object.
+    private final CommonConfigReader commonConfig = CommonConfigReader.getInstance();
 
     /**
      * PeerProcess is the entry point of this program.
@@ -91,17 +93,23 @@ public class PeerProcess implements Runnable {
                             // If verification was successful, change status to ESTABLISHED and set the pid for the connection.
                             c.status = Connection.Status.ESTABLISHED;
                             c.pid = ((HandshakeMessage) response).pid;
-                            // Send bitfield.
-                            // TODO.
+                            // Send the bitfield message of the current peer to other peer.
+                            Peer current = PeerInfoReader.PEERS.get(this.pid);
+                            c.out.writeObject(new Message(current.bitfield.length, Message.MessageType.bitfield, current.bitfield));
+                            c.out.flush();
                         }
                     } catch (Exception e) {
                         Logger.getLogger(PeerProcess.class.getName()).log(Level.SEVERE, null, e);
                     }
                 } else { // Connection is established.
-                    int neighbor_pid = c.pid;
-                    // Exchange pieces.
+                    Peer neighbor = PeerInfoReader.PEERS.get(c.pid);
+                    // Exchange pieces with neighbor.
+                    // Check the input stream of connection to read the arrived messages.
                     // TODO.
-
+                    // If a piece was received, update bitfield.
+                    // TODO.
+                    // Write the appropriate output.
+                    // TODO.
                 }
             }
         }

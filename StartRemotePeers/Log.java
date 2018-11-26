@@ -11,7 +11,19 @@ public class Log {
 
 	// main file for testing only
 	public static void main(String args[]) 
-	{
+	{                   
+            // Test the bitfield update message.
+            byte[] bitfield = new byte[39]; // e.g. there are 306 pieces.
+            int pieceIndex = 305;
+            byte b = bitfield[pieceIndex / 8];
+            String s1 = String.format("%8s", Integer.toBinaryString(b & 0xFF)).replace(' ', '0');
+            System.out.println(" Before " + s1);
+            
+            bitfield[(pieceIndex / 8)]  |= (0x80 /* 1000 0000 */ >> (pieceIndex % 8));
+            b = bitfield[pieceIndex / 8];
+            String s2 = String.format("%8s", Integer.toBinaryString(b & 0xFF)).replace(' ', '0');
+            System.out.print(" After  " + s2);
+            
 		TCPto(1001,1002);
 		TCPfrom(1002,1001);
 		int [] testPeers = {1001,1004,1006,1009};
