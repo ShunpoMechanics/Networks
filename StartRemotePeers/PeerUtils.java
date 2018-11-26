@@ -33,7 +33,7 @@ public class PeerUtils {
                             local_pid);
                     // Keep track of connected PEERS.
                     conns.add(conn);
-                    System.out.println("local_pid " + local_pid + " opened connection to " + neighbor.hostname + ":" + neighbor.listeningPort);
+                    System.out.println("pid " + local_pid + ": opened connection to " + neighbor.hostname + ":" + neighbor.listeningPort);
                 } catch (IOException ex) {
                     System.out.println("Socket creation to " + neighbor.hostname + ":" + neighbor.listeningPort + " failed");
                     Logger.getLogger(PeerProcess.class.getName()).log(Level.SEVERE, null, ex);

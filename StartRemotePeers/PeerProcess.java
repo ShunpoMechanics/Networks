@@ -64,19 +64,8 @@ public class PeerProcess implements Runnable {
         // The client part of the peer process:
         // Connect to other PEERS with lower peerID per the project specification.
         CopyOnWriteArrayList<Connection> conns = PeerUtils.connectToOthers(local_pid);
-        // Send a handshake to each connection and create a thread to handle the exchanges.
+        // Create a thread to handle the exchanges.
         for (Connection conn : conns) {
-            // Send handshake.
-            try {
-                // Send a HandshakeMessage with remote_pid set to the current peer's remote_pid.
-                System.out.println("pid " + local_pid + " sending handshake to " + conn.socket.getInetAddress() + ":" + conn.socket.getPort());
-                conn.out.writeObject(new HandshakeMessage(local_pid));
-                conn.out.flush();
-            } catch (IOException ex) {
-                System.err.println("ObjectOutputStream to " + conn.socket.getInetAddress() + ":" + conn.socket.getPort() + " failed");
-                Logger.getLogger(PeerProcess.class.getName()).log(Level.SEVERE, null, ex);
-            }
-            // Do not put handshake in ConnectionHandler, since handshake is only sent when the current client initiates the connection.
             // Handle exchanges in a separate thread.
             new Thread(new ConnectionHandler(conn)).start();
         }
@@ -146,6 +135,16 @@ public class PeerProcess implements Runnable {
 
         @Override
         public void run() {
+            // Send handshake.
+            try {
+                // Send a HandshakeMessage with pid set to the current peer's pid.
+                System.out.println("pid " + local_pid + ": sending handshake to " + conn.socket.getInetAddress() + ":" + conn.socket.getPort());
+                conn.out.writeObject(new HandshakeMessage(local_pid));
+                conn.out.flush();
+            } catch (IOException ex) {
+                System.err.println("ObjectOutputStream to " + conn.socket.getInetAddress() + ":" + conn.socket.getPort() + " failed");
+                Logger.getLogger(PeerProcess.class.getName()).log(Level.SEVERE, null, ex);
+            }
             // While peer is alive, exchange pieces.
             while (isAlive) {
                 try {
@@ -157,7 +156,7 @@ public class PeerProcess implements Runnable {
                             // If verification was successful, change status to ESTABLISHED and set the remote_pid for the connection.
                             conn.status = Connection.Status.ESTABLISHED;
                             conn.remote_pid = ((HandshakeMessage) response).pid;
-                            System.out.println("HandshakeMessage successfully received at " + conn.local_pid + " from " + conn.remote_pid);
+                            System.out.println("pid " + conn.local_pid +  ": HandshakeMessage successfully received from " + conn.remote_pid);
                             // Send the bitfield message of the current peer to other peer.
                             Peer current = PeerInfoReader.PEERS.get(conn.local_pid);
                             conn.out.writeObject(new Message(current.bitfield.length, Message.MessageType.bitfield, current.bitfield));
