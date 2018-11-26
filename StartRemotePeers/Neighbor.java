@@ -32,7 +32,7 @@ public class Neighbor {
 	public void notPrefer()
 	{this.isPreferred = false;}
 	
-	public void interested()
+	public void interrested()
 	{this.isInterrested = true;}
 	
 	public void disinterested()
@@ -96,4 +96,12 @@ public class Neighbor {
     public void setDownloadRate(int downloadRate) {
         this.downloadRate = downloadRate;
     }
+	
+	public static void main(String[] args) {
+		Neighbor nei = new Neighbor();
+		nei.choke();
+		nei.disinterested();
+		nei.prefer();
+		System.out.println(nei.getStatus());
+	}
 }
