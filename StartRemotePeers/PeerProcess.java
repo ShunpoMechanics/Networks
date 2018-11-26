@@ -83,26 +83,26 @@ public class PeerProcess implements Runnable {
 
         // While peer is alive, exchange pieces.
         while (isAlive) {
-            for (Connection c : conns) {
+            for (Connection conn : conns) {
                 // If connection is still in handshake stage, check the input.
-                if (c.status == Connection.Status.HANDSHAKE) {
+                if (conn.status == Connection.Status.HANDSHAKE) {
                     try {
-                        Object response = c.in.readObject();
+                        Object response = conn.in.readObject();
                         if (response != null) {
-                            HandshakeMessage.verifyHandshakeMessage(response, c);
+                            HandshakeMessage.verifyHandshakeMessage(response, conn);
                             // If verification was successful, change status to ESTABLISHED and set the pid for the connection.
-                            c.status = Connection.Status.ESTABLISHED;
-                            c.pid = ((HandshakeMessage) response).pid;
+                            conn.status = Connection.Status.ESTABLISHED;
+                            conn.pid = ((HandshakeMessage) response).pid;
                             // Send the bitfield message of the current peer to other peer.
                             Peer current = PeerInfoReader.PEERS.get(this.pid);
-                            c.out.writeObject(new Message(current.bitfield.length, Message.MessageType.bitfield, current.bitfield));
-                            c.out.flush();
+                            conn.out.writeObject(new Message(current.bitfield.length, Message.MessageType.bitfield, current.bitfield));
+                            conn.out.flush();
                         }
                     } catch (Exception e) {
                         Logger.getLogger(PeerProcess.class.getName()).log(Level.SEVERE, null, e);
                     }
                 } else { // Connection is established.
-                    Peer neighbor = PeerInfoReader.PEERS.get(c.pid);
+                    Peer neighbor = PeerInfoReader.PEERS.get(conn.pid);
                     // Exchange pieces with neighbor.
                     // Check the input stream of connection to read the arrived messages.
                     // TODO.
