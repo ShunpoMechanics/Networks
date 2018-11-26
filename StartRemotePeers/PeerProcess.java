@@ -180,10 +180,12 @@ public class PeerProcess implements Runnable {
                         Message response = (Message) conn.in.readObject();
                         switch (response.getMessageType()) {
                             case choke: {
+                                System.out.println("pid " + current.pid + " received `choke` from " + peer.pid);
                                 peer.peerChokedCurrentClient = true;
                                 break;
                             }
                             case unchoke: {
+                                System.out.println("pid " + current.pid + " received `unchoke` from " + peer.pid);
                                 peer.peerChokedCurrentClient = false;
                                 // Send request to this peer if current client is interested in the peer
                                 // and the peer doesn't have all the pieces.
@@ -195,16 +197,19 @@ public class PeerProcess implements Runnable {
                                 break;
                             }
                             case interested: {
+                                System.out.println("pid " + current.pid + " received `interested` from " + peer.pid);
                                 peer.peerInterestedInCurrentClient = true;
                                 // TODO: Anything else here?
                                 break;
                             }
                             case notInterested: {
+                                System.out.println("pid " + current.pid + " received `notInterested` from " + peer.pid);
                                 peer.peerInterestedInCurrentClient = false;
                                 // TODO: Anything else here?
                                 break;
                             }
                             case have: {
+                                System.out.println("pid " + current.pid + " received `have` from " + peer.pid);
                                 // If have was received, update bitfield of remote peer.
                                 byte[] bytes = response.getMessagePayload();
                                 // Payload must be 4 bytes.
@@ -233,10 +238,12 @@ public class PeerProcess implements Runnable {
                                 break;
                             }
                             case bitfield: {
+                                System.out.println("pid " + current.pid + " received `bitfield` from " + peer.pid);
                                 // If bitfield was received, set bitfield of remote peer.
                                 peer.bitfield = BitSet.valueOf(response.getMessagePayload());
                                 // If the received bitfield is full (i.e. has all the pieces), update the number of `seeds`.
                                 if (peer.bitfield.cardinality() == commonConfig.numPieces) {
+                                    System.out.println("peer " + peer.pid + " has all the pieces, seed count: " + seedCount);
                                     seedCount++;
                                 }
                                 // Determine whether current client should send an ‘interested’ message.
@@ -254,6 +261,7 @@ public class PeerProcess implements Runnable {
                                 break;
                             }
                             case request: {
+                                System.out.println("pid " + current.pid + " received `request` from " + peer.pid);
                                 // Send the piece that was requested.
                                 int pieceIndex = ByteBuffer.wrap(response.getMessagePayload()).getInt();
                                 // Get the payload from fileManager.
@@ -265,6 +273,7 @@ public class PeerProcess implements Runnable {
                                 break;
                             }
                             case piece: {
+                                System.out.println("pid " + current.pid + " received `piece` from " + peer.pid);
                                 // If a piece was received, update bitfield of current client.
                                 byte[] payload = response.getMessagePayload();
                                 int pieceIndex = ByteBuffer.wrap(payload, 0, 4).getInt();
