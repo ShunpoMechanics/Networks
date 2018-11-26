@@ -15,9 +15,15 @@ import java.util.stream.Stream;
  */
 public class PeerUtils {
 
-    public static Message generateInterestMessageTo(Peer remote) throws Exception {
+    public static Message generateNotInterestMessageTo(Peer peer) throws Exception {
         // Update the `interest` booleans.
-        remote.currentClientInterestedInPeer = true;
+        peer.currentClientInterestedInPeer = false;
+        return new Message(0, Message.MessageType.notInterested, null);
+    }
+
+    public static Message generateInterestMessageTo(Peer peer) throws Exception {
+        // Update the `interest` booleans.
+        peer.currentClientInterestedInPeer = true;
         return new Message(0, Message.MessageType.interested, null);
     }
 

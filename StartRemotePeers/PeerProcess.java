@@ -213,6 +213,18 @@ public class PeerProcess implements Runnable {
                                     Message interested = PeerUtils.generateInterestMessageTo(peer);
                                     conn.out.writeObject(interested);
                                     conn.out.flush();
+                                } else {
+                                    // If current client already has the piece, and 
+                                    // the neighbor doesn't have any interesting pieces (i.e. the neighbor's bitfield is a subset of our bitfield), 
+                                    // send `notInterested`.
+                                    BitSet tmp = (BitSet) current.bitfield.clone();
+                                    tmp.and(current.bitfield);
+                                    // If the result of `and`, is the same as the other peer's bitfield, then other bitfield is a subset of current client's bitfield.
+                                    if (tmp.equals(peer.bitfield)) {
+                                        Message not_interested = PeerUtils.generateNotInterestMessageTo(peer);
+                                        conn.out.writeObject(not_interested);
+                                        conn.out.flush();
+                                    }
                                 }
                                 break;
                             }
