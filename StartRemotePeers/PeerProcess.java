@@ -195,7 +195,8 @@ public class PeerProcess implements Runnable {
                                 break;
                             }
                             case notInterested: {
-                                // TODO.
+                                peer.peerInterestedInCurrentClient = false;
+                                // TODO: Anything else here?
                                 break;
                             }
                             case have: {
@@ -218,7 +219,7 @@ public class PeerProcess implements Runnable {
                                     // the neighbor doesn't have any interesting pieces (i.e. the neighbor's bitfield is a subset of our bitfield), 
                                     // send `notInterested`.
                                     BitSet tmp = (BitSet) current.bitfield.clone();
-                                    tmp.and(current.bitfield);
+                                    tmp.and(peer.bitfield);
                                     // If the result of `and`, is the same as the other peer's bitfield, then other bitfield is a subset of current client's bitfield.
                                     if (tmp.equals(peer.bitfield)) {
                                         Message not_interested = PeerUtils.generateNotInterestMessageTo(peer);
@@ -232,7 +233,19 @@ public class PeerProcess implements Runnable {
                                 // If bitfield was received, set bitfield of remote peer.
                                 peer.bitfield = BitSet.valueOf(response.getMessagePayload());
                                 // Determine whether current client should send an ‘interested’ message.
-                                // TODO;
+                                BitSet tmp = (BitSet) current.bitfield.clone();
+                                tmp.and(peer.bitfield);
+                                // If the result of `and`, is the same as the other peer's bitfield, then other bitfield is a subset of current client's bitfield.
+                                if (tmp.equals(peer.bitfield)) {
+                                    Message not_interested = PeerUtils.generateNotInterestMessageTo(peer);
+                                    conn.out.writeObject(not_interested);
+                                    conn.out.flush();
+                                } else { // Else, peer has something that current client doesn't, send `interested`.
+                                    Message interested = PeerUtils.generateInterestMessageTo(peer);
+                                    conn.out.writeObject(interested);
+                                    conn.out.flush();
+                                }
+                                // TODO: Anything else here?
                                 break;
                             }
                             case request: {
