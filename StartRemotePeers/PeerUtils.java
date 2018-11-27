@@ -5,6 +5,7 @@ import java.io.ObjectOutputStream;
 import java.net.Socket;
 import java.nio.ByteBuffer;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -88,15 +89,16 @@ public class PeerUtils {
 
     /**
      * @param k
+     * @param pid_2_conn
      *
-     * @return
+     * @return Lists of preferred and unselected neighbors.
      */
-    public static TwoLists choosePreferredNeighbors(int k) {
+    public static TwoLists choosePreferredNeighbors(int k, ConcurrentHashMap<Integer, Connection> pid_2_conn) {
         List<Peer> interestedNeighbors = new ArrayList<>();
-        List<Peer> unselectedNeighbors = new ArrayList<>();
-        List<Peer> preferredNeighbors = new ArrayList<>(k + 1);
+        List<Peer> unselectedNeighbors = new ArrayList<>(); // interested, but not preferred.
+        List<Peer> preferredNeighbors = new ArrayList<>(k + 1); // interested and preferred.
 
-        for (Integer pid : PeerInfoReader.PEERS.keySet()) {
+        for (Integer pid : pid_2_conn.keySet()) { // pid_2_conn.keySet() is the set of remote peerIDs that the current client has an ESTABLISHED connection.
             Peer p = PeerInfoReader.PEERS.get(pid);
             // A neighbor can become a preferred neighbor only if it's interested.
             if (p.peerInterestedInCurrentClient) {
@@ -108,22 +110,25 @@ public class PeerUtils {
         // Sort based on download rates in descending order.
         Collections.sort(interestedNeighbors, Comparator.comparing(Peer::getDownloadRate).reversed());
         // Take the top K, these are definitely preferred.
-        for (int i = 0; i < k; i++) {
+        for (int i = 0; i < Math.min(k, interestedNeighbors.size()); i++) {
             preferredNeighbors.add(interestedNeighbors.get(i));
         }
         // Add the rest of interested neighbors to unselected.
         for (int i = k; i < interestedNeighbors.size(); i++) {
             unselectedNeighbors.add(interestedNeighbors.get(i));
         }
-        // However, choose one random neighbor from the interested, but not in the top k, neighbors as well.
-        Random rand = new Random();
-        Peer optimisticallySelected = interestedNeighbors.get(rand.nextInt(interestedNeighbors.size() - k) + k /* Random in range k to interestedNeighbors.size() */);
-        preferredNeighbors.add(optimisticallySelected); // Keep in preferred and remove from unselected.
-        unselectedNeighbors.remove(optimisticallySelected);
 
         // Return both preferredNeighbors (to send "unchoke" to) and unselectedNeighbors (to send "choke" to).
         PeerUtils.TwoLists res = new PeerUtils.TwoLists(preferredNeighbors, unselectedNeighbors);
         return res;
+    }
+
+    public static Peer chooseOneOptimisticallyUnchokedNeighbor(List<Peer> unselected) {
+        // However, choose one random neighbor from the interested, but not select (i.e. not in the top k), neighbors as well.
+        Random rand = new Random();
+        Peer optimisticallySelected = unselected.get(rand.nextInt(unselected.size()));
+        unselected.remove(optimisticallySelected);
+        return optimisticallySelected;
     }
 
     public static class TwoLists {

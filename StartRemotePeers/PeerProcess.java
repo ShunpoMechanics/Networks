@@ -6,6 +6,10 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.nio.ByteBuffer;
 import java.util.BitSet;
+import java.util.List;
+import java.util.Timer;
+import java.util.TimerTask;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -48,6 +52,16 @@ public class PeerProcess implements Runnable {
     public volatile boolean isAlive;
     private final int local_pid;
 
+    // Keep track of all connections.
+    CopyOnWriteArrayList<Connection> conns;
+    // A map for easy lookup of a remote peerID's established connection.
+    ConcurrentHashMap<Integer, Connection> pid_2_conn;
+    // Keep track of preferred and unselected neighbors.
+    List<Peer> preferredNeighbors;
+    List<Peer> unselectedNeighbors;
+    // Preferred neighbor re-selection timer.
+    Timer unchokingIntervalTimer;
+
     public PeerProcess(int local_pid) throws IOException {
         this.local_pid = local_pid;
         // Get the current peer's information from PeerInfoReader.
@@ -58,13 +72,15 @@ public class PeerProcess implements Runnable {
             System.exit(1);
         }
         isAlive = true;
+        unchokingIntervalTimer = new Timer("UnchokingIntervalTimer");
+        pid_2_conn = new ConcurrentHashMap<>();
     }
 
     @Override
     public void run() {
         // The client part of the peer process:
         // Connect to other PEERS with lower peerID per the project specification.
-        CopyOnWriteArrayList<Connection> conns = PeerUtils.connectToOthers(local_pid);
+        conns = PeerUtils.connectToOthers(local_pid);
         // Create a thread to handle the exchanges.
         for (Connection conn : conns) {
             // Handle exchanges in a separate thread.
@@ -75,6 +91,35 @@ public class PeerProcess implements Runnable {
         Server server = new Server(local_pid, conns);
         Thread serverThread = new Thread(server);
         serverThread.start();
+
+        // Start the unchokingIntervalTimer for repeated fixed-delay (unchokingInterval*1000 ms) execution.
+        unchokingIntervalTimer.schedule(new TimerTask() {
+            @Override
+            public void run() {
+                System.out.println("pid " + local_pid + ": selecting preferred neighbors.");
+                PeerUtils.TwoLists lists = PeerUtils.choosePreferredNeighbors(commonConfig.numberOfPreferredNeighbors, pid_2_conn);
+                preferredNeighbors = lists.peersToUnchoke;
+                unselectedNeighbors = lists.peerToChoke;
+
+                try {
+                    for (Peer p : preferredNeighbors) { // These are the peers to `unchoke`.
+                        Message unchoke = new Message(0, Message.MessageType.unchoke, null);
+                        // Write unchoke message to the corresponding peer's connection.
+                        pid_2_conn.get(p.pid).writeAndFlush(unchoke);
+                    }
+                    for (Peer p : unselectedNeighbors) { // These are the peers to `choke`.
+                        Message choke = new Message(0, Message.MessageType.choke, null);
+                        pid_2_conn.get(p.pid).writeAndFlush(choke);
+                    }
+                } catch (Exception ex) {
+                    Logger.getLogger(PeerProcess.class.getName()).log(Level.SEVERE, null, ex);
+                }
+                // Stop the timer if the thread is no longer alive.
+                if (!isAlive) {
+                    unchokingIntervalTimer.cancel();
+                }
+            }
+        }, /* delay = */ 1000, /* period = */ commonConfig.unchokingInterval * 1000); // *1000 to get milliseconds.
     }
 
     class Server implements Runnable {
@@ -102,7 +147,7 @@ public class PeerProcess implements Runnable {
                 System.exit(1);
             }
             try {
-                // While the PeerProcess is alive.
+                // While the PeerProcess is alive, accept new connections.
                 while (isAlive) {
                     Socket s = listener.accept();
                     Connection conn = new Connection(s,
@@ -165,6 +210,8 @@ public class PeerProcess implements Runnable {
                             conn.status = Connection.Status.ESTABLISHED;
                             conn.remote_pid = ((HandshakeMessage) response).pid;
                             System.out.println("pid " + conn.local_pid + ": HandshakeMessage successfully received from " + conn.remote_pid);
+                            // Add remote_pid -> conn mapping to pid_2_conn for easy lookup.
+                            pid_2_conn.put(conn.remote_pid, conn);
                             // Send the bitfield message of the current peer to other peer.
                             Peer current = PeerInfoReader.PEERS.get(conn.local_pid);
                             byte[] bitfield = current.bitfield.toByteArray();

@@ -32,7 +32,14 @@ public class Connection {
         remote_pid = -1;
     }
 
-    public void writeAndFlush(Object obj) throws IOException {
+    /**
+     * Synchronized method that writes and flushes the given object to this
+     * connection's ObjectOutputStream.
+     *
+     * @param obj
+     * @throws IOException
+     */
+    public synchronized void writeAndFlush(Object obj) throws IOException {
         if (obj != null) {
             this.out.writeObject(obj);
             this.out.flush();
