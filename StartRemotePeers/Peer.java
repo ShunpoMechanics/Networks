@@ -1,6 +1,7 @@
 
 import java.util.BitSet;
 import java.util.HashSet;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * @author Tima Tavassoli (ftavassoli@ufl.edu)
@@ -19,7 +20,7 @@ public class Peer {
     boolean peerInterestedInCurrentClient = false; // Peer is interested in the current client.
     boolean currentClientInterestedInPeer = false; // The current client is interested in the peer.
 
-    int downloadRate;
+    AtomicInteger downloadRate = new AtomicInteger(0);
     // If the peer has the entire file, this would be initialized to 1s (except spare bits), otherwise this starts at all 0s.
     // As the peer receives pieces, this is updated accordingly.
     BitSet bitfield;
@@ -27,18 +28,16 @@ public class Peer {
     // This is no longer needed, as we randomly select pieces (and could possibly repeat the request if not received).
 //    HashSet<Integer> requestedIndices;
 
-    /**
-     * Set the bit at pieceIndex to 1.
-     *
-     * @param pieceIndex
-     */
-//    public void updateBitfield(int pieceIndex) {
-//        // (pieceIndex / 8) is the index of the byte, (pieceIndex % 8) is the index within the byte which is set to one through
-//        // a logical "OR".
-//        bitfield[(pieceIndex / 8)] |= (0x80 /* 1000 0000 */ >> (pieceIndex % 8));
-//    }
+
     public void setPreferredStatus(boolean status) {
         this.isPreferred = status;
+
+    public void prefer() {
+        this.isPreferred = true;
+    }
+
+    public void notPrefer() {
+        this.isPreferred = false;
     }
 
     public boolean getPreferredStatus() {
@@ -68,6 +67,7 @@ public class Peer {
 //        //If choked, interrested and preferreded it returns 111
 //        //Define behavior with a switch using the various combincations instead of if(true && true || false) etc
 //    }
+
     /**
      * @return the pid
      */
@@ -86,13 +86,13 @@ public class Peer {
      * @return the downloadRate
      */
     public int getDownloadRate() {
-        return downloadRate;
+        return downloadRate.get();
     }
 
     /**
      * @param downloadRate the downloadRate to set
      */
-    public void setDownloadRate(int downloadRate) {
-        this.downloadRate = downloadRate;
+    public synchronized void setDownloadRate(int downloadRate) {
+        this.downloadRate = new AtomicInteger(downloadRate);
     }
 }

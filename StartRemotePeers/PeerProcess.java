@@ -62,6 +62,8 @@ public class PeerProcess implements Runnable {
     List<Peer> unselectedNeighbors;
     // Preferred neighbor re-selection timer.
     Timer unchokingIntervalTimer;
+    // Optimistically unchoked neighbor selection timer.
+    Timer OptimisticUnchokingIntervalTimer;
     // Number of `seeds`. A seed is a peer that has all the pieces.
     AtomicInteger seedCount;
 
@@ -75,8 +77,11 @@ public class PeerProcess implements Runnable {
             System.exit(1);
         }
         isAlive = true;
+        // Initialize the timers.
         unchokingIntervalTimer = new Timer("UnchokingIntervalTimer");
+        OptimisticUnchokingIntervalTimer = new Timer("OptimisticUnchokingInterval");
         pid_2_conn = new ConcurrentHashMap<>();
+        // Initialize the seed count.
         seedCount = new AtomicInteger(0);
         // If current client has all the pieces, it's a seed.
         if (current_peer.bitfield.cardinality() == commonConfig.numPieces) {
@@ -106,13 +111,17 @@ public class PeerProcess implements Runnable {
             public void run() {
                 // Stop the timer if the thread is no longer alive.
                 if (!isAlive) {
-                    System.out.println("pid " + local_pid + ": timer cancelled.");
+                    System.out.println("pid " + local_pid + ": unchokingIntervalTimer cancelled.");
                     unchokingIntervalTimer.cancel();
                     System.out.println("Goodbye!");
                     System.exit(0);
                 }
                 System.out.println("pid " + local_pid + ": selecting preferred neighbors.");
-                PeerUtils.TwoLists lists = PeerUtils.choosePreferredNeighbors(commonConfig.numberOfPreferredNeighbors, pid_2_conn);
+                boolean clientHasAllPieces = (PeerInfoReader.PEERS.get(local_pid).bitfield.cardinality() == commonConfig.numPieces);
+                PeerUtils.TwoLists lists = PeerUtils.choosePreferredNeighbors(
+                        /* k= */ commonConfig.numberOfPreferredNeighbors,
+                        pid_2_conn,
+                        clientHasAllPieces);
                 preferredNeighbors = lists.peersToUnchoke;
                 unselectedNeighbors = lists.peerToChoke;
 
@@ -122,17 +131,47 @@ public class PeerProcess implements Runnable {
                         // Write unchoke message to the corresponding peer's connection.
                         pid_2_conn.get(p.pid).writeAndFlush(unchoke);
                         System.out.println("pid " + local_pid + ": sent `unchoke` to pid " + p.pid);
+                        // Reset the download rate.
+                        p.setDownloadRate(0);
                     }
                     for (Peer p : unselectedNeighbors) { // These are the peers to `choke`.
                         Message choke = new Message(0, Message.MessageType.choke, null);
                         pid_2_conn.get(p.pid).writeAndFlush(choke);
                         System.out.println("pid " + local_pid + ": sent `choke` to pid " + p.pid);
+                        // Reset the download rate.
+                        p.setDownloadRate(0);
                     }
                 } catch (Exception ex) {
                     Logger.getLogger(PeerProcess.class.getName()).log(Level.SEVERE, null, ex);
                 }
             }
         }, /* delay = */ 1000, /* period = */ commonConfig.unchokingInterval * 1000); // *1000 to get milliseconds.
+
+        // Start the OptimisticUnchokingIntervalTimer for repeated fixed-delay (optimisticUnchokingInterval*1000 ms) execution.
+        OptimisticUnchokingIntervalTimer.schedule(new TimerTask() {
+            @Override
+            public void run() {
+                // Stop the timer if the thread is no longer alive.
+                if (!isAlive) {
+                    System.out.println("pid " + local_pid + ": OptimisticUnchokingIntervalTimer cancelled.");
+                    unchokingIntervalTimer.cancel();
+                }
+                try {
+                    Peer optimisticallySelected = PeerUtils.chooseOneOptimisticallyUnchokedNeighbor(unselectedNeighbors);
+                    if (optimisticallySelected == null) return;
+                    unselectedNeighbors.remove(optimisticallySelected);
+                    preferredNeighbors.add(optimisticallySelected); // Keep it in the list of unchoked neighbors, not used at the moment.
+                    Message unchoke = new Message(0, Message.MessageType.unchoke, null);
+                    // Write unchoke message to the corresponding peer's connection.
+                    pid_2_conn.get(optimisticallySelected.pid).writeAndFlush(unchoke);
+                    System.out.println("pid " + local_pid + ": sent `unchoke` to optimisticallySelected pid " + optimisticallySelected.pid);
+                } catch (Exception ex) {
+                    Logger.getLogger(PeerProcess.class.getName()).log(Level.SEVERE, null, ex);
+                }
+            }
+            // Note: optimisticUnchokingInterval is assumed to be higher than unchokingInterval.
+            // Note: This starts running after unchokingInterval seconds to make sure there is a list of unselectedNeighbors.
+        }, /* delay = */ (commonConfig.unchokingInterval + 1) * 1000, /* period = */ commonConfig.optimisticUnchokingInterval * 1000); // *1000 to get milliseconds.
     }
 
     class Server implements Runnable {
@@ -326,9 +365,6 @@ public class PeerProcess implements Runnable {
                                 if (peer.bitfield.cardinality() == commonConfig.numPieces) {
                                     seedCount.incrementAndGet();
                                     System.out.println("peer " + peer.pid + " has all the pieces, seed count: " + seedCount.get());
-//                                    if (seedCount.get() == PeerInfoReader.PEERS.size()) {
-//                                        cleanupAndExit();
-//                                    }
                                 }
                                 // Determine whether current client should send an ‘interested’ message.
                                 BitSet tmp = (BitSet) current.bitfield.clone();
@@ -360,6 +396,8 @@ public class PeerProcess implements Runnable {
                                 byte[] payload = response.getMessagePayload();
                                 int pieceIndex = ByteBuffer.wrap(payload, 0, 4).getInt();
                                 current.bitfield.set(pieceIndex);
+                                // Increment the download rate for peer that sent the piece.
+                                peer.downloadRate.incrementAndGet();
                                 // Write the payload using fileManager.
                                 fileManager.receivePiece(payload, "~/project/peer_" + current.pid + "/" + commonConfig.fileName + pieceIndex);
                                 // Determine whether current client should is still interested and should send another request message.
@@ -385,9 +423,6 @@ public class PeerProcess implements Runnable {
                                     current.hasFile = 2; // Not used.
                                     byte[] bitfield = current.bitfield.toByteArray();
                                     conn.writeAndFlush(new Message(bitfield.length, Message.MessageType.bitfield, bitfield));
-//                                    if (seedCount.get() == PeerInfoReader.PEERS.size()) {
-//                                        cleanupAndExit();
-//                                    }
                                 }
                                 break;
                             }
@@ -403,12 +438,12 @@ public class PeerProcess implements Runnable {
         }
 
         private void cleanupAndExit() throws IOException {
-            System.out.println("pid " + local_pid + " PeerInfoReader.PEERS.get(local_pid).hasFile " + PeerInfoReader.PEERS.get(local_pid).hasFile);
+            System.out.println("pid " + local_pid + ": PeerInfoReader.PEERS.get(local_pid).hasFile " + PeerInfoReader.PEERS.get(local_pid).hasFile);
             if (PeerInfoReader.PEERS.get(local_pid).hasFile != 1) {
                 FileManager.merge(FileManager.pieceGatherer());
             }
             isAlive = false;
-            System.out.println("isAlive " + isAlive);
+            System.out.println("pid " + local_pid + ": isAlive=" + isAlive);
         }
 
     }

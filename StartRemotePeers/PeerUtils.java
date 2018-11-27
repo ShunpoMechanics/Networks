@@ -42,7 +42,7 @@ public class PeerUtils {
         BitSet bitfield = (BitSet) local_peer.bitfield.clone(); // Grab a copy.
         bitfield.flip(0, ccr.numPieces); // flip all bits, A'.
         bitfield.and(remote_peer.bitfield); // & B.
-        
+
         Random rand = new Random();
         int selectedIndex = rand.nextInt(ccr.numPieces);
         // If the selectedIndex is 0, either the client already has the piece or the remote peer doesn't have the piece, so try again.
@@ -98,10 +98,13 @@ public class PeerUtils {
     /**
      * @param k
      * @param pid_2_conn
+     * @param clientHasAllPieces
      *
      * @return Lists of preferred and unselected neighbors.
      */
-    public static TwoLists choosePreferredNeighbors(int k, ConcurrentHashMap<Integer, Connection> pid_2_conn) {
+    public static TwoLists choosePreferredNeighbors(int k,
+                                                    ConcurrentHashMap<Integer, Connection> pid_2_conn,
+                                                    boolean clientHasAllPieces) {
         List<Peer> interestedNeighbors = new ArrayList<>();
         List<Peer> unselectedNeighbors = new ArrayList<>(); // interested, but not preferred.
         List<Peer> preferredNeighbors = new ArrayList<>(k + 1); // interested and preferred.
@@ -115,8 +118,13 @@ public class PeerUtils {
                 unselectedNeighbors.add(p);
             }
         }
-        // Sort based on download rates in descending order.
-        Collections.sort(interestedNeighbors, Comparator.comparing(Peer::getDownloadRate).reversed());
+        // If the current client has all the pieces, "it determines preferred neighbors randomly".
+        if (clientHasAllPieces) {
+            Collections.shuffle(interestedNeighbors);
+        } else {
+            // Sort based on download rates in descending order.
+            Collections.sort(interestedNeighbors, Comparator.comparing(Peer::getDownloadRate).reversed());
+        }
         // Take the top K, these are definitely preferred.
         for (int i = 0; i < Math.min(k, interestedNeighbors.size()); i++) {
             preferredNeighbors.add(interestedNeighbors.get(i));
@@ -132,6 +140,9 @@ public class PeerUtils {
     }
 
     public static Peer chooseOneOptimisticallyUnchokedNeighbor(List<Peer> unselected) {
+        if (unselected.isEmpty()) {
+            return null;
+        }
         // However, choose one random neighbor from the interested, but not select (i.e. not in the top k), neighbors as well.
         Random rand = new Random();
         Peer optimisticallySelected = unselected.get(rand.nextInt(unselected.size()));
