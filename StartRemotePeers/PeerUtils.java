@@ -16,6 +16,14 @@ import java.util.stream.Stream;
  */
 public class PeerUtils {
 
+    public static void printBitSet(BitSet bitfield) {
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < CommonConfigReader.getInstance().numPieces; i++) {
+            sb.append(bitfield.get(i) ? "1 " : "0 ");
+        }
+        System.out.println("bitfield : " + sb);
+    }
+
     public static Message generateNotInterestMessageTo(Peer peer) throws Exception {
         // Update the `interest` booleans.
         peer.currentClientInterestedInPeer = false;
@@ -34,10 +42,10 @@ public class PeerUtils {
         BitSet bitfield = (BitSet) local_peer.bitfield.clone(); // Grab a copy.
         bitfield.flip(0, ccr.numPieces); // flip all bits, A'.
         bitfield.and(remote_peer.bitfield); // & B.
-
+        
         Random rand = new Random();
         int selectedIndex = rand.nextInt(ccr.numPieces);
-        // If the selectedIndex is 0, either the client already has the piece of the remote peer doesn't have the piece, so try again.
+        // If the selectedIndex is 0, either the client already has the piece or the remote peer doesn't have the piece, so try again.
         // Since the index is random, if the piece has not been received yet,
         // it is possible but unlikely to send the same request to multiple peers.
         int lastRandom;
@@ -46,7 +54,7 @@ public class PeerUtils {
             // Just get the next clear bit, this way the random loop won't be repeated too many times.
             selectedIndex = bitfield.nextSetBit(selectedIndex);
             // If nextClearBit was not found or was one of the spare bits, try a new random index smaller than the last random.
-            if (selectedIndex == bitfield.length() || selectedIndex >= ccr.numPieces) {
+            if (selectedIndex == -1 || selectedIndex == bitfield.length() || selectedIndex >= ccr.numPieces) {
                 selectedIndex = rand.nextInt(lastRandom);
             }
             if (lastRandom < 1) {

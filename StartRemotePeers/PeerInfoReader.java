@@ -26,13 +26,17 @@ public class PeerInfoReader {
             n.hasFile = Integer.parseInt(tokens[3]);
             // Create bitfield which defaults to all 0s.
             byte[] bitfield = new byte[(int) Math.ceil(CommonConfigReader.getInstance().numPieces / 8.0)];
-            // If a peer hasFile, the bits need to be set to 1, except the spare bits. 
+            // If a peer hasFile, the bits need to be set to 1, the spare bits need to be set to 0 later. 
             if (n.hasFile == 1) {
                 Arrays.fill(bitfield, (byte) 0xFF);
             }
-            // Left shift by number of spare bits, so as to set them to 0.
-            bitfield[bitfield.length - 1] <<= bitfield.length * 8 - CommonConfigReader.getInstance().numPieces;
+            // Create the BitSet.
             n.bitfield = BitSet.valueOf(bitfield);
+            // Then, set the spare bits to 0.
+            int spareBitCount = bitfield.length * 8 - CommonConfigReader.getInstance().numPieces;
+            n.bitfield.clear(/*from*/CommonConfigReader.getInstance().numPieces,
+                    /*to*/ CommonConfigReader.getInstance().numPieces + spareBitCount);
+
             PEERS.put(n.pid, n);
         }
 
