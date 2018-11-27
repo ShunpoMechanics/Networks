@@ -29,8 +29,8 @@ public class CommonConfigReader {
     }
 
     final int numberOfPreferredNeighbors;
-    final int unchokingInterval;
-    final int optimisticUnchokingInterval;
+    final int unchokingInterval; // in seconds.
+    final int optimisticUnchokingInterval; // in seconds.
     final String fileName;
     final long fileSize;
     final int pieceSize;

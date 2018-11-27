@@ -59,14 +59,14 @@ public class FileManager {
             extension += temp.charAt(i);
         }
 
-        File outputFile = new File("out." + extension);
+        File outputFile = new File(ccr.fileName);
         //File outputFile = new File(ccr.fileName);
 
         byte[] part = new byte[pieceSize];
         FileOutputStream out = new FileOutputStream((outputFile), true);
         int bufferSize;
 
-        for (int i = 0; i < numPieces + 1; i++) {
+        for (int i = 0; i < numPieces; i++) {
             FileInputStream input = new FileInputStream(parts.get(i));
             BufferedInputStream buffer = new BufferedInputStream(input);
             bufferSize = buffer.read(part);
@@ -148,7 +148,7 @@ public class FileManager {
     }
 
     public static List<File> pieceGatherer() {
-        for (int i = 0; i < numPieces + 1; i++) {
+        for (int i = 0; i < numPieces; i++) {
             pieces.add(new File(ccr.fileName + i));
         }
         return pieces;
