@@ -36,16 +36,16 @@ public class PeerUtils {
 
         Random rand = new Random();
         int selectedIndex = rand.nextInt(ccr.numPieces);
-        // If the selectedIndex is 0, either the client already has the piece of the remote peer doesn't have the piece, so try again.
+        // If the selectedIndex is 0, either the client already has the piece or the remote peer doesn't have the piece, so try again.
         // Since the index is random, if the piece has not been received yet,
         // it is possible but unlikely to send the same request to multiple peers.
         int lastRandom;
         while (!bitfield.get(selectedIndex)) {
             lastRandom = selectedIndex;
-            // Just get the next clear bit, this way the random loop won't be repeated too many times.
+            // Just get the next set bit, this way the random loop won't be repeated too many times.
             selectedIndex = bitfield.nextSetBit(selectedIndex);
-            // If nextClearBit was not found or was one of the spare bits, try a new random index smaller than the last random.
-            if (selectedIndex == bitfield.length() || selectedIndex >= ccr.numPieces) {
+            // If nextSetBit was not found or was one of the spare bits, try a new random index smaller than the last random.
+            if ( selectedIndex == -1 || selectedIndex == bitfield.length()|| selectedIndex >= ccr.numPieces) {
                 selectedIndex = rand.nextInt(lastRandom);
             }
             if (lastRandom < 1) {

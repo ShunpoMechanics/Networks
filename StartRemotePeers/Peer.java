@@ -37,12 +37,8 @@ public class Peer {
 //        // a logical "OR".
 //        bitfield[(pieceIndex / 8)] |= (0x80 /* 1000 0000 */ >> (pieceIndex % 8));
 //    }
-    public void prefer() {
-        this.isPreferred = true;
-    }
-
-    public void notPrefer() {
-        this.isPreferred = false;
+    public void setPreferredStatus(boolean status) {
+        this.isPreferred = status;
     }
 
     public boolean getPreferredStatus() {

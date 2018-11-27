@@ -27,7 +27,7 @@ public class PeerProcess implements Runnable {
      */
     public static void main(String args[]) throws IOException {
         // Make sure the input has a peer ID argument.
-        if (args.length < 1 || args[0].isEmpty() || !Character.isDigit(args[0].charAt(0))) {
+        if (args.length < 1 || args[0].isEmpty() || !Character.isDigit(args[0].charAt(0)) || !Character.isDigit(args[0].charAt(1)) || !Character.isDigit(args[0].charAt(2)) || !Character.isDigit(args[0].charAt(3))) {
             System.err.println("Invalid input args, please pass a peerID.");
             System.exit(1);
         }
@@ -113,6 +113,10 @@ public class PeerProcess implements Runnable {
                     conns.add(conn);
                     // Create a new connection handler.
                     new Thread(new ConnectionHandler(conn)).start();
+					//Start p second loop handler
+					new Thread(new PreferenceHandler()).start(); 
+					//Start opstimically unchoke handler
+					new Thread(new ChokingHandler()).start(); 
                 }
             } catch (IOException ex) {
                 Logger.getLogger(PeerProcess.class.getName()).log(Level.SEVERE, null, ex);
@@ -125,7 +129,28 @@ public class PeerProcess implements Runnable {
             }
         }
     }
-
+	class PreferenceHandler implements Runnable {
+		
+		@Override
+		public void run() {
+			while(isAlive){
+				Thread.sleep(commonConfig.unchokingInterval*1000);
+				//Use peerID from each Connection in ArrayList to fetch Peer from Hashmap
+				//if Peer is interested, use peer.downloadRate to pick
+				//Pick highest download rates up to commonConfig.numberOfPreferredNeighbors
+			}
+		}
+	}
+	class ChokingHandler implements Runnable {
+		
+		@Override
+		public void run() {
+			while(isAlive){
+				Thread.sleep(commonConfig.optimisticUnchokingInterval*1000);
+				//Randomly pick interested peer
+			}
+		}
+	}
     class ConnectionHandler implements Runnable {
 
         Connection conn;
@@ -192,20 +217,18 @@ public class PeerProcess implements Runnable {
                                 if (peer.currentClientInterestedInPeer
                                         && current.bitfield.cardinality() < commonConfig.numPieces) {
                                     Message req = PeerUtils.generateRequestMessage(current, peer);
-                                    conn.writeAndFlush(req);
+									conn.writeAndFlush(req);
                                 }
                                 break;
                             }
                             case interested: {
                                 System.out.println("pid " + current.pid + " received `interested` from " + peer.pid);
                                 peer.peerInterestedInCurrentClient = true;
-                                // TODO: Anything else here?
                                 break;
                             }
                             case notInterested: {
                                 System.out.println("pid " + current.pid + " received `notInterested` from " + peer.pid);
                                 peer.peerInterestedInCurrentClient = false;
-                                // TODO: Anything else here?
                                 break;
                             }
                             case have: {
@@ -257,7 +280,6 @@ public class PeerProcess implements Runnable {
                                     Message interested = PeerUtils.generateInterestMessageTo(peer);
                                     conn.writeAndFlush(interested);
                                 }
-                                // TODO: Anything else here?
                                 break;
                             }
                             case request: {
@@ -266,10 +288,9 @@ public class PeerProcess implements Runnable {
                                 int pieceIndex = ByteBuffer.wrap(response.getMessagePayload()).getInt();
                                 // Get the payload from fileManager.
                                 // TODO: test this.
-                                byte[] payload = fileManager.sendPiece(commonConfig.fileName + "" + pieceIndex, pieceIndex);
+                                byte[] payload = fileManager.sendPiece("~/project/peer_" + current.pid + "/" + commonConfig.fileName + pieceIndex, pieceIndex);
                                 Message piece = new Message(payload.length, Message.MessageType.piece, payload);
                                 conn.writeAndFlush(piece);
-                                // TODO Anything else here?
                                 break;
                             }
                             case piece: {
@@ -279,7 +300,7 @@ public class PeerProcess implements Runnable {
                                 int pieceIndex = ByteBuffer.wrap(payload, 0, 4).getInt();
                                 current.bitfield.set(pieceIndex);
                                 // Write the payload using fileManager.
-                                fileManager.receivePiece(payload, commonConfig.fileName + "" + pieceIndex);
+                                fileManager.receivePiece(payload, "~/project/peer_" + current.pid + "/" + commonConfig.fileName + pieceIndex);
                                 // Determine whether current client should is still interested and should send another request message.
                                 BitSet tmp = (BitSet) current.bitfield.clone();
                                 tmp.and(peer.bitfield);
@@ -300,7 +321,6 @@ public class PeerProcess implements Runnable {
                                     byte[] bitfield = current.bitfield.toByteArray();
                                     conn.writeAndFlush(new Message(bitfield.length, Message.MessageType.bitfield, bitfield));
                                 }
-                                // TODO: Anthing else here?
                                 break;
                             }
                         }
