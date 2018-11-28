@@ -124,6 +124,7 @@ public class PeerProcess implements Runnable {
                         clientHasAllPieces);
                 preferredNeighbors = lists.peersToUnchoke;
                 unselectedNeighbors = lists.peerToChoke;
+                Log.preferredNeighbors(local_pid, preferredNeighbors);
 
                 try {
                     for (Peer p : preferredNeighbors) { // These are the peers to `unchoke`.
@@ -165,6 +166,7 @@ public class PeerProcess implements Runnable {
                     // Write unchoke message to the corresponding peer's connection.
                     pid_2_conn.get(optimisticallySelected.pid).writeAndFlush(unchoke);
                     System.out.println("pid " + local_pid + ": sent `unchoke` to optimisticallySelected pid " + optimisticallySelected.pid);
+                    Log.optimisticallyUnchoked(local_pid, optimisticallySelected.pid);
                 } catch (Exception ex) {
                     Logger.getLogger(PeerProcess.class.getName()).log(Level.SEVERE, null, ex);
                 }
@@ -240,6 +242,7 @@ public class PeerProcess implements Runnable {
                 // Send a HandshakeMessage with pid set to the current peer's pid.
                 System.out.println("pid " + local_pid + ": sending handshake to " + conn.socket.getInetAddress() + ":" + conn.socket.getPort());
                 conn.writeAndFlush(new HandshakeMessage(local_pid));
+                Log.TCPto(conn.local_pid, conn.remote_pid);
             } catch (IOException ex) {
                 System.err.println("ObjectOutputStream to " + conn.socket.getInetAddress() + ":" + conn.socket.getPort() + " failed");
                 Logger.getLogger(PeerProcess.class.getName()).log(Level.SEVERE, null, ex);
@@ -260,6 +263,7 @@ public class PeerProcess implements Runnable {
                             conn.status = Connection.Status.ESTABLISHED;
                             conn.remote_pid = ((HandshakeMessage) response).pid;
                             System.out.println("pid " + conn.local_pid + ": HandshakeMessage successfully received from " + conn.remote_pid);
+                            Log.TCPfrom(conn.local_pid, conn.remote_pid);
                             // Add remote_pid -> conn mapping to pid_2_conn for easy lookup.
                             pid_2_conn.put(conn.remote_pid, conn);
                             // Send the bitfield message of the current peer to other peer.
@@ -279,11 +283,13 @@ public class PeerProcess implements Runnable {
                             case choke: {
                                 System.out.println("pid " + current.pid + " received `choke` from " + peer.pid);
                                 peer.peerChokedCurrentClient = true;
+                                Log.choked(conn.local_pid, conn.remote_pid);
                                 break;
                             }
                             case unchoke: {
                                 System.out.println("pid " + current.pid + " received `unchoke` from " + peer.pid);
                                 peer.peerChokedCurrentClient = false;
+                                Log.unchoked(conn.local_pid, conn.remote_pid);
                                 // Send request to this peer if current client is interested in the peer
                                 // and the peer doesn't have all the pieces.
                                 if (peer.currentClientInterestedInPeer
@@ -296,11 +302,13 @@ public class PeerProcess implements Runnable {
                             case interested: {
                                 System.out.println("pid " + current.pid + " received `interested` from " + peer.pid);
                                 peer.peerInterestedInCurrentClient = true;
+                                Log.interested(conn.local_pid, conn.remote_pid);
                                 break;
                             }
                             case notInterested: {
                                 System.out.println("pid " + current.pid + " received `notInterested` from " + peer.pid);
                                 peer.peerInterestedInCurrentClient = false;
+                                Log.notInterested(conn.local_pid, conn.remote_pid);
                                 break;
                             }
                             case have: {
@@ -313,6 +321,7 @@ public class PeerProcess implements Runnable {
                                     break;
                                 }
                                 int pieceIndex = ByteBuffer.wrap(bytes).getInt();
+                                Log.have(conn.local_pid, conn.remote_pid,pieceIndex);
                                 peer.bitfield.set(pieceIndex);
                                 // Determine whether current client should send an ‘interested’ message.
                                 if (!current.bitfield.get(pieceIndex)) { // If current client doesn't have this piece.
@@ -375,6 +384,7 @@ public class PeerProcess implements Runnable {
                                 peer.downloadRate.incrementAndGet();
                                 // Write the payload using fileManager.
                                 fileManager.receivePiece(payload, "../project/peer_" + current.pid + "/" + commonConfig.fileName + pieceIndex);
+                                Log.download(conn.local_pid, conn.remote_pid, pieceIndex, current.bitfield.cardinality());
                                 // Determine whether current client should is still interested and should send another request message.
                                 BitSet tmp = (BitSet) current.bitfield.clone();
                                 tmp.and(peer.bitfield);
@@ -394,7 +404,8 @@ public class PeerProcess implements Runnable {
                                     // This client has all the pieces, send the current client's bitfield to remote peer to inform 
                                     // remote peer that the current client is finished. 
                                     // Once everyone receives full bitfields, the program should exit.
-                                    seedCount.incrementAndGet(); 
+                                    Log.complete(conn.local_pid);
+                                    seedCount.incrementAndGet();
 									FileManager.merge(local_pid, FileManager.pieceGatherer(local_pid));
                                     current.hasFile = 2; // Not used.
                                     byte[] bitfield = current.bitfield.toByteArray();

@@ -26,9 +26,9 @@ public class Log {
             
 		TCPto(1001,1002);
 		TCPfrom(1002,1001);
-		int [] testPeers = {1001,1004,1006,1009};
-		preferredNeighbors(1002, testPeers);
-		optimimisticallyUnchoked(1002,1003);
+		//int [] testPeers = {1001,1004,1006,1009};
+		//preferredNeighbors(1002, testPeers);
+		optimisticallyUnchoked(1002,1003);
 		unchoked(1003,1002);
 		choked(1006,1009);
 		have(1004,1006,3);
@@ -50,17 +50,17 @@ public class Log {
 	}
 
 	// Preferred Neighbors
-	public static void preferredNeighbors(int peer1, int [] neighbors) {
+	public static void preferredNeighbors(int peer1, List<Peer> peers) {
 		String message = peer1 + " has the preferred neighbors ";
-		for (int i = 0; i < neighbors.length - 1; i++) {
-			message += neighbors[i] + ",";
+		for (int i = 0; i < peers.size() - 1; i++) {
+			message += peers.get(i).pid + ",";
 		}
-		message += neighbors[neighbors.length-1] + ".";
+		message += peers.get(peers.size()-1) + ".";
 		wrtieLog(peer1, message);
 	}
 
 	// Optimistically Unchoked Neighbor
-	public static void optimimisticallyUnchoked(int peer1, int peer2) {
+	public static void optimisticallyUnchoked(int peer1, int peer2) {
 		String message = peer1 + " has the optimistically unchoked neighbor " + peer2 + ".";
 	    wrtieLog(peer1, message);
 	}
