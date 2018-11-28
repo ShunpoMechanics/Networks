@@ -124,7 +124,7 @@ public class PeerProcess implements Runnable {
                         clientHasAllPieces);
                 preferredNeighbors = lists.peersToUnchoke;
                 unselectedNeighbors = lists.peerToChoke;
-                Log.preferredNeighbors(conn.local_pid, preferredNeighbors);
+                Log.preferredNeighbors(local_pid, preferredNeighbors);
 
                 try {
                     for (Peer p : preferredNeighbors) { // These are the peers to `unchoke`.
@@ -166,7 +166,7 @@ public class PeerProcess implements Runnable {
                     // Write unchoke message to the corresponding peer's connection.
                     pid_2_conn.get(optimisticallySelected.pid).writeAndFlush(unchoke);
                     System.out.println("pid " + local_pid + ": sent `unchoke` to optimisticallySelected pid " + optimisticallySelected.pid);
-                    Log.optimisticallyUnchoked(conn.local_pid, conn.remote_pid);
+                    Log.optimisticallyUnchoked(local_pid, optimisticallySelected.pid);
                 } catch (Exception ex) {
                     Logger.getLogger(PeerProcess.class.getName()).log(Level.SEVERE, null, ex);
                 }

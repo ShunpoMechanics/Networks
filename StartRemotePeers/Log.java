@@ -28,7 +28,7 @@ public class Log {
 		TCPfrom(1002,1001);
 		//int [] testPeers = {1001,1004,1006,1009};
 		//preferredNeighbors(1002, testPeers);
-		optimimisticallyUnchoked(1002,1003);
+		optimisticallyUnchoked(1002,1003);
 		unchoked(1003,1002);
 		choked(1006,1009);
 		have(1004,1006,3);
@@ -60,7 +60,7 @@ public class Log {
 	}
 
 	// Optimistically Unchoked Neighbor
-	public static void optimimisticallyUnchoked(int peer1, int peer2) {
+	public static void optimisticallyUnchoked(int peer1, int peer2) {
 		String message = peer1 + " has the optimistically unchoked neighbor " + peer2 + ".";
 	    wrtieLog(peer1, message);
 	}
