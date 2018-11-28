@@ -41,10 +41,11 @@ public class FileManager {
         }
     }
 
-    public static void merge(List<File> parts) throws IOException {
+    public static void merge(int pid, List<File> parts) throws IOException {
         String temp = "";
         //This loop and the next are for testing
         //Get extension of the file
+		/*
         for (int i = ccr.fileName.length() - 1; i > 0; i--) {
             char index = ccr.fileName.charAt(i);
             if (index == '.') {
@@ -58,9 +59,8 @@ public class FileManager {
         for (int i = temp.length() - 1; i > -1; i--) {
             extension += temp.charAt(i);
         }
-
-        File outputFile = new File(ccr.fileName);
-        //File outputFile = new File(ccr.fileName);
+		*/
+        File outputFile = new File("../project/peer_" + pid + "/" + ccr.fileName);
 
         byte[] part = new byte[pieceSize];
         FileOutputStream out = new FileOutputStream((outputFile), true);
@@ -147,9 +147,9 @@ public class FileManager {
         fos.close();
     }
 
-    public static List<File> pieceGatherer() {
+    public static List<File> pieceGatherer(int pid) {
         for (int i = 0; i < numPieces; i++) {
-            pieces.add(new File(ccr.fileName + i));
+            pieces.add(new File("../project/peer_" + pid + "/" + ccr.fileName + i));
         }
         return pieces;
     }
@@ -164,7 +164,7 @@ public class FileManager {
         /*File file2 = new File(".");
         for(String fileNames : file2.list()) System.out.println(fileNames);
          */
-        FileManager fm = new FileManager();
+        /*FileManager fm = new FileManager();
         File file = new File(ccr.fileName);
         double start = fm.timer();
         split(file);
@@ -180,5 +180,6 @@ public class FileManager {
         stop = fm.timer();
 
         System.out.println("Merging took " + (stop - start) + " seconds.");
-    }
+		*/
+	}
 }

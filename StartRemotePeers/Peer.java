@@ -31,7 +31,7 @@ public class Peer {
 
     public void setPreferredStatus(boolean status) {
         this.isPreferred = status;
-
+	}
     public void prefer() {
         this.isPreferred = true;
     }

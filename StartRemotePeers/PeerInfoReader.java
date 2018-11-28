@@ -8,6 +8,7 @@ import java.util.*;
  */
 public class PeerInfoReader {
 
+    FileManager fm = new FileManager();
     /**
      * List of all PEERS from the configuration file.
      */
@@ -28,6 +29,8 @@ public class PeerInfoReader {
             byte[] bitfield = new byte[(int) Math.ceil(CommonConfigReader.getInstance().numPieces / 8.0)];
             // If a peer hasFile, the bits need to be set to 1, the spare bits need to be set to 0 later. 
             if (n.hasFile == 1) {
+				File file = new File("../project/peer_" + n.pid + "/" + CommonConfigReader.getInstance().fileName);
+				fm.split(file);
                 Arrays.fill(bitfield, (byte) 0xFF);
             }
             // Create the BitSet.

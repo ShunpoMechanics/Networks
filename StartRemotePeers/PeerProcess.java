@@ -210,10 +210,6 @@ public class PeerProcess implements Runnable {
                     conns.add(conn);
                     // Create a new connection handler.
                     new Thread(new ConnectionHandler(conn)).start();
-					//Start p second loop handler
-					new Thread(new PreferenceHandler()).start(); 
-					//Start opstimically unchoke handler
-					new Thread(new ChokingHandler()).start(); 
                 }
             } catch (IOException ex) {
                 Logger.getLogger(PeerProcess.class.getName()).log(Level.SEVERE, null, ex);
@@ -226,28 +222,7 @@ public class PeerProcess implements Runnable {
             }
         }
     }
-	class PreferenceHandler implements Runnable {
-		
-		@Override
-		public void run() {
-			while(isAlive){
-				Thread.sleep(commonConfig.unchokingInterval*1000);
-				//Use peerID from each Connection in ArrayList to fetch Peer from Hashmap
-				//if Peer is interested, use peer.downloadRate to pick
-				//Pick highest download rates up to commonConfig.numberOfPreferredNeighbors
-			}
-		}
-	}
-	class ChokingHandler implements Runnable {
-		
-		@Override
-		public void run() {
-			while(isAlive){
-				Thread.sleep(commonConfig.optimisticUnchokingInterval*1000);
-				//Randomly pick interested peer
-			}
-		}
-	}
+
     class ConnectionHandler implements Runnable {
 
         Connection conn;
@@ -385,7 +360,7 @@ public class PeerProcess implements Runnable {
                                 int pieceIndex = ByteBuffer.wrap(response.getMessagePayload()).getInt();
                                 // Get the payload from fileManager.
                                 // TODO: test this.
-                                byte[] payload = fileManager.sendPiece("~/project/peer_" + current.pid + "/" + commonConfig.fileName + pieceIndex, pieceIndex);
+                                byte[] payload = fileManager.sendPiece("../project/peer_" + current.pid + "/" + commonConfig.fileName + pieceIndex, pieceIndex);
                                 Message piece = new Message(payload.length, Message.MessageType.piece, payload);
                                 conn.writeAndFlush(piece);
                                 break;
@@ -399,7 +374,7 @@ public class PeerProcess implements Runnable {
                                 // Increment the download rate for peer that sent the piece.
                                 peer.downloadRate.incrementAndGet();
                                 // Write the payload using fileManager.
-                                fileManager.receivePiece(payload, "~/project/peer_" + current.pid + "/" + commonConfig.fileName + pieceIndex);
+                                fileManager.receivePiece(payload, "../project/peer_" + current.pid + "/" + commonConfig.fileName + pieceIndex);
                                 // Determine whether current client should is still interested and should send another request message.
                                 BitSet tmp = (BitSet) current.bitfield.clone();
                                 tmp.and(peer.bitfield);
@@ -419,7 +394,8 @@ public class PeerProcess implements Runnable {
                                     // This client has all the pieces, send the current client's bitfield to remote peer to inform 
                                     // remote peer that the current client is finished. 
                                     // Once everyone receives full bitfields, the program should exit.
-                                    seedCount.incrementAndGet();
+                                    seedCount.incrementAndGet(); 
+									FileManager.merge(local_pid, FileManager.pieceGatherer(local_pid));
                                     current.hasFile = 2; // Not used.
                                     byte[] bitfield = current.bitfield.toByteArray();
                                     conn.writeAndFlush(new Message(bitfield.length, Message.MessageType.bitfield, bitfield));
@@ -440,7 +416,7 @@ public class PeerProcess implements Runnable {
         private void cleanupAndExit() throws IOException {
             System.out.println("pid " + local_pid + ": PeerInfoReader.PEERS.get(local_pid).hasFile " + PeerInfoReader.PEERS.get(local_pid).hasFile);
             if (PeerInfoReader.PEERS.get(local_pid).hasFile != 1) {
-                FileManager.merge(FileManager.pieceGatherer());
+                FileManager.merge(local_pid, FileManager.pieceGatherer(local_pid));
             }
             isAlive = false;
             System.out.println("pid " + local_pid + ": isAlive=" + isAlive);

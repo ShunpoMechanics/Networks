@@ -57,7 +57,14 @@ public class StartRemotePeers {
 			myStart.getConfiguration();
 					
 			// get current path
-			String path = System.getProperty("user.dir");
+			String path = System.getProperty("/cise/homes/jcorrea/Networks Project/StartRemotePeers");
+			String directoryString = "mkdir project";
+			String pass = "Oerb@n39";
+			
+			for(int i = 0; i < myStart.peerInfoVector.size(); i++){
+				RemotePeerInfo pInfo = (RemotePeerInfo) myStart.peerInfoVector.elementAt(i);
+				directoryString += " project/" + pInfo.peerId;
+			}
 			
 			// start clients at remote hosts
 			for (int i = 0; i < myStart.peerInfoVector.size(); i++) {
@@ -67,7 +74,7 @@ public class StartRemotePeers {
 				
 				// *********************** IMPORTANT *************************** //
 				// If your program is JAVA, use this line.
-				Runtime.getRuntime().exec("ssh " + pInfo.peerAddress + " cd " + path + "; java peerProcess " + pInfo.peerId);
+				Runtime.getRuntime().exec("ssh " + pInfo.peerAddress + "cd " + path + "; java PeerProcess " + pInfo.peerId);
 				
 				// If your program is C/C++, use this line instead of the above line. 
 				//Runtime.getRuntime().exec("ssh " + pInfo.peerAddress + " cd " + path + "; ./peerProcess " + pInfo.peerId);
