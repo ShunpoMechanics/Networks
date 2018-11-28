@@ -41,76 +41,78 @@ public class Log {
 	// TCP Connection
 	public static void TCPto(int peer1, int peer2) {
 	    String message = peer1 + " makes a connection to Peer " + peer2 + ".";
-	    wrtieLog(peer1, message);
+	    writeLog(peer1, message);
 	}
 
 	public static void TCPfrom(int peer1, int peer2) {
 	    String message = peer1 + " is connected from Peer " + peer2 + ".";
-	    wrtieLog(peer1, message);
+	    writeLog(peer1, message);
 	}
 
 	// Preferred Neighbors
 	public static void preferredNeighbors(int peer1, List<Peer> peers) {
 		String message = peer1 + " has the preferred neighbors ";
+		if(peers.size() == 0)
+			return;
 		for (int i = 0; i < peers.size() - 1; i++) {
-			message += peers.get(i).pid + ",";
-		}
-		message += peers.get(peers.size()-1) + ".";
-		wrtieLog(peer1, message);
+			message += peers.get(i).pid + ", ";
+		} 
+		message += peers.get(peers.size() - 1).pid + ".";
+		writeLog(peer1, message);
 	}
 
 	// Optimistically Unchoked Neighbor
 	public static void optimisticallyUnchoked(int peer1, int peer2) {
 		String message = peer1 + " has the optimistically unchoked neighbor " + peer2 + ".";
-	    wrtieLog(peer1, message);
+	    writeLog(peer1, message);
 	}
 
 	// Unchoking
 	public static void unchoked(int peer1, int peer2) {
 		String message = peer1 + " is unchoked by " + peer2 + ".";
-	    wrtieLog(peer1, message);
+	    writeLog(peer1, message);
 	}
 
 	// Choking
 	public static void choked(int peer1, int peer2) {
 		String message = peer1 + " is choked by " + peer2 + ".";
-	    wrtieLog(peer1, message);
+	    writeLog(peer1, message);
 	}
 
 	// Receiving 'have' message
 	public static void have(int peer1, int peer2, int pieceIndex) {
 		String message = peer1 + " received the 'have' message from " + peer2 + " for the piece " + pieceIndex + ".";
-	    wrtieLog(peer1, message);
+	    writeLog(peer1, message);
 	}
 
 	// Receiving 'interested' message
 	public static void interested(int peer1, int peer2) {
 		String message = peer1 + " received the 'interested' message from " + peer2 + ".";
-	    wrtieLog(peer1, message);
+	    writeLog(peer1, message);
 	}
 
 	// receiving 'not interested' message
 	public static void notInterested(int peer1, int peer2) {
 		String message = peer1 + " received the 'not interested' message from " + peer2 + ".";
-	    wrtieLog(peer1, message);
+	    writeLog(peer1, message);
 	}
 
 	// downloading a piece
 	public static void download(int peer1, int peer2, int pieceIndex, int numPieces) {
 		String message = peer1 + " has downloaded the piece " + pieceIndex + " from " + peer2 + "." 
 		+ "\nNow the number of pieces it has is " + numPieces + ".";
-	    wrtieLog(peer1, message);
+	    writeLog(peer1, message);
 	}
 
 	// completion of download
 	public static void complete(int peer1) {
 		String message = peer1 + " has downloaded the complete file.";
-	    wrtieLog(peer1, message);
+	    writeLog(peer1, message);
 	}
 
 	// Generic write to log file
-	public static void wrtieLog (int peer1, String message) {
-		String fileName = "log_peer_" + peer1 + ".log";
+	public static void writeLog (int peer1, String message) {
+		String fileName = "../project/log_peer_" + peer1 + ".log";
 		Path p = Paths.get(fileName);
 		Date date = new Date();
 		DateFormat df = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss");

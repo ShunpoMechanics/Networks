@@ -242,7 +242,7 @@ public class PeerProcess implements Runnable {
                 // Send a HandshakeMessage with pid set to the current peer's pid.
                 System.out.println("pid " + local_pid + ": sending handshake to " + conn.socket.getInetAddress() + ":" + conn.socket.getPort());
                 conn.writeAndFlush(new HandshakeMessage(local_pid));
-                Log.TCPto(conn.local_pid, conn.remote_pid);
+                
             } catch (IOException ex) {
                 System.err.println("ObjectOutputStream to " + conn.socket.getInetAddress() + ":" + conn.socket.getPort() + " failed");
                 Logger.getLogger(PeerProcess.class.getName()).log(Level.SEVERE, null, ex);
@@ -264,6 +264,7 @@ public class PeerProcess implements Runnable {
                             conn.remote_pid = ((HandshakeMessage) response).pid;
                             System.out.println("pid " + conn.local_pid + ": HandshakeMessage successfully received from " + conn.remote_pid);
                             Log.TCPfrom(conn.local_pid, conn.remote_pid);
+							Log.TCPto(conn.remote_pid, conn.local_pid);
                             // Add remote_pid -> conn mapping to pid_2_conn for easy lookup.
                             pid_2_conn.put(conn.remote_pid, conn);
                             // Send the bitfield message of the current peer to other peer.
