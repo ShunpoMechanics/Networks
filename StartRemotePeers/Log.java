@@ -112,7 +112,7 @@ public class Log {
 
 	// Generic write to log file
 	public static void writeLog (int peer1, String message) {
-		String fileName = "../project/log_peer_" + peer1 + ".log";
+		String fileName = System.getProperty("user.dir")+"/log_peer_" + peer1 + ".log";
 		Path p = Paths.get(fileName);
 		Date date = new Date();
 		DateFormat df = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss");

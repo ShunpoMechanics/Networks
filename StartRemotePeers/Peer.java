@@ -28,46 +28,6 @@ public class Peer {
     // This is no longer needed, as we randomly select pieces (and could possibly repeat the request if not received).
 //    HashSet<Integer> requestedIndices;
 
-
-    public void setPreferredStatus(boolean status) {
-        this.isPreferred = status;
-	}
-    public void prefer() {
-        this.isPreferred = true;
-    }
-
-    public void notPrefer() {
-        this.isPreferred = false;
-    }
-
-    public boolean getPreferredStatus() {
-        return isPreferred;
-    }
-
-//    public int getStatus() {
-//        int choke = 0;
-//        int interrested = 0;
-//        int preferreded = 0;
-//        int statusCode = 0;
-//        if (isChoked) {
-//            choke = 1;
-//        }
-//        if (isInterrested) {
-//            interrested = 1;
-//        }
-//        if (isPreferred) {
-//            preferreded = 1;
-//        }
-//        choke = choke * 100;
-//        interrested = interrested * 10;
-//        statusCode = choke + interrested + preferreded;
-//        return statusCode;
-//        //Returns a status code with all 3 fields in order to minimize function calls
-//        //Ex: if unchoked, uninterrested, but preferreded the statusCode returns 001
-//        //If choked, interrested and preferreded it returns 111
-//        //Define behavior with a switch using the various combincations instead of if(true && true || false) etc
-//    }
-
     /**
      * @return the pid
      */

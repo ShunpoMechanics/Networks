@@ -37,41 +37,27 @@ public class FileManager {
             FileOutputStream out = new FileOutputStream(outputFile); //Create output stream
 
             out.write(part, 0, bufferSize); //Actually output file
+            out.flush();
+            out.close();
             count++;
         }
     }
 
     public static void merge(int pid, List<File> parts) throws IOException {
-        String temp = "";
-        //This loop and the next are for testing
-        //Get extension of the file
-		/*
-        for (int i = ccr.fileName.length() - 1; i > 0; i--) {
-            char index = ccr.fileName.charAt(i);
-            if (index == '.') {
-                break;
-            } else {
-                temp += index;
-            }
-        }
-
-        //Reverse extension
-        for (int i = temp.length() - 1; i > -1; i--) {
-            extension += temp.charAt(i);
-        }
-		*/
-        File outputFile = new File("../project/peer_" + pid + "/" + ccr.fileName);
+        File outputFile = new File(System.getProperty("user.dir") + "/peer_" + pid + "/" + ccr.fileName);
 
         byte[] part = new byte[pieceSize];
-        FileOutputStream out = new FileOutputStream((outputFile), true);
+        FileOutputStream out = new FileOutputStream((outputFile));
         int bufferSize;
 
         for (int i = 0; i < numPieces; i++) {
-            FileInputStream input = new FileInputStream(parts.get(i));
-            BufferedInputStream buffer = new BufferedInputStream(input);
-            bufferSize = buffer.read(part);
+            BufferedInputStream bis = new BufferedInputStream(new FileInputStream(parts.get(i)));
+            bufferSize = bis.read(part);
             out.write(part, 0, bufferSize);
+            bis.close();
         }
+        out.flush();
+        out.close();
     }
 
     public void sendPiece(Socket socket, String pathname) throws IOException {
@@ -116,8 +102,10 @@ public class FileManager {
         } catch (IOException e) {
             System.out.println(e.getStackTrace());
         }
-
+        byteOutput.flush();
         byte[] output = byteOutput.toByteArray();
+        fis.close();
+
         return output;
 
     }
@@ -149,37 +137,16 @@ public class FileManager {
 
     public static List<File> pieceGatherer(int pid) {
         for (int i = 0; i < numPieces; i++) {
-            pieces.add(new File("../project/peer_" + pid + "/" + ccr.fileName + i));
+            pieces.add(new File(System.getProperty("user.dir") + "/" + "peer_" + pid + "/" + ccr.fileName + i));
         }
         return pieces;
     }
 
-    public static double timer() {
-        double time = System.nanoTime();
-        time = time / (pow(10, 9));
-        return time;
+    public static void removePieces(List<File> pieces) {
+        for (File file : pieces) {
+            if (!file.isDirectory()) {
+                file.delete();
+            }
+        }
     }
-
-    public static void main(String[] args) throws IOException {
-        /*File file2 = new File(".");
-        for(String fileNames : file2.list()) System.out.println(fileNames);
-         */
-        /*FileManager fm = new FileManager();
-        File file = new File(ccr.fileName);
-        double start = fm.timer();
-        split(file);
-        double stop = fm.timer();
-
-        System.out.println("Splitting took " + (stop - start) + " seconds.");
-        //Use this to collect all the pieces
-        pieceGatherer();
-
-        start = fm.timer();
-        //Merge the pieces
-        merge(pieces);
-        stop = fm.timer();
-
-        System.out.println("Merging took " + (stop - start) + " seconds.");
-		*/
-	}
 }
